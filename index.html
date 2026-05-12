@@ -92,10 +92,17 @@
       fetchAndRender(worksheet, _dashboard);
     });
 
-  }).catch(() => {
-    // Outside Tableau — render with sample data for development
-    renderChart(getSampleData(CONFIG.chart), 'Illy Coffee', null);
-  });
+    }).catch(() => {
+        renderChart(getSampleData(CONFIG.chart), 'Illy Coffee', null);
+      });
+
+      // Fallback timeout in case API hangs
+      setTimeout(() => {
+        const el = document.getElementById('chart');
+        if (el.innerHTML.includes('Loading')) {
+          renderChart(getSampleData(CONFIG.chart), 'Illy Coffee', null);
+        }
+      }, 3000);
 
   // ─── DATA FETCHING ────────────────────────────────────────────────────────
   async function fetchAndRender(worksheet, dashboard) {
