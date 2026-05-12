@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BP Chart Extensions</title>
+  <script src="https://extensions.tableausoftware.com/lib/tableau.extensions.1.latest.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: transparent; font-family: 'Baskerville', 'Book Antiqua', serif; overflow: hidden; width: 100vw; height: 100vh; }
+    #chart { width: 100%; height: 100%; }
+    .error { color: #E8527A; font-size: 13px; padding: 16px; font-family: monospace; }
+    .loading { color: #888; font-size: 13px; padding: 16px; }
+  </style>
+</head>
+<body>
+  <div id="chart"><div class="loading">Loading...</div></div>
+
+  <script>
+  // ─── CONFIG FROM URL PARAMS ───────────────────────────────────────────────
+  const p = new URLSearchParams(window.location.search);
+  const CONFIG = {
+    chart:          p.get('chart')          || 'donut',
+    worksheet:      p.get('worksheet')      || '',
+    brandField:     p.get('brandField')     || 'Brand Name Upper',
+    valueField:     p.get('valueField')     || 'Raw Value',
+    periodField:    p.get('periodField')    || 'Quarter',
+    indicatorField: p.get('indicatorField') || 'indicator_name',
+    indicatorValue: p.get('indicatorValue') || '',
+    parameter:      p.get('parameter')      || 'Select Brand',
+    selectedColor:  p.get('selectedColor')  || '#E8527A',
+    neutralColor:   p.get('neutralColor')   || '#5a5a5a',
+    bgColor:        p.get('bgColor')        || 'transparent',
+  };
+
+  document.body.style.background = CONFIG.bgColor;
+
+  // ─── SAMPLE DATA (used when outside Tableau / during dev) ─────────────────
+  function getSampleData(chart) {
+    if (chart === 'line') {
+      return [
+        { name: 'Starbucks',    period: 'Q1', value: 6.2 },
+        { name: 'Starbucks',    period: 'Q2', value: 6.8 },
+        { name: 'Starbucks',    period: 'Q3', value: 7.1 },
+        { name: 'Starbucks',    period: 'Q4', value: 6.9 },
+        { name: 'Nespresso',    period: 'Q1', value: 4.8 },
+        { name: 'Nespresso',    period: 'Q2', value: 5.1 },
+        { name: 'Nespresso',    period: 'Q3', value: 5.4 },
+        { name: 'Nespresso',    period: 'Q4', value: 5.2 },
+        { name: 'Illy Coffee',  period: 'Q1', value: 3.9 },
+        { name: 'Illy Coffee',  period: 'Q2', value: 4.0 },
+        { name: 'Illy Coffee',  period: 'Q3', value: 4.2 },
+        { name: 'Illy Coffee',  period: 'Q4', value: 4.5 },
+      ];
+    }
+    return [
+      { name: 'Starbucks',     value: 6.8 },
+      { name: 'Nespresso',     value: 5.4 },
+      { name: 'Illy Coffee',   value: 4.2 },
+      { name: 'Lavazza',       value: 3.9 },
+      { name: "Peet's Coffee", value: 3.1 },
+    ];
+  }
+
+  // ─── TABLEAU INIT ─────────────────────────────────────────────────────────
+  let _dashboard = null;
+
+  tableau.extensions.initializeAsync().then(async () => {
+    _dashboard = tableau.extensions.dashboardContent.dashboard;
+
+    const worksheet = _dashboard.worksheets.find(ws => ws.name === CONFIG.worksheet);
+    if (!worksheet) {
+      showError(`Worksheet "${CONFIG.worksheet}" not found. Check the worksheet URL param.`);
+      return;
+    }
+
+    // Initial render
+    await fetchAndRender(worksheet, _dashboard);
+
+    // Re-render on parameter change
+    const allParams = await _dashboard.getParametersAsync();
+    const param = allParams.find(p => p.name === CONFIG.parameter);
+    if (param) {
+      param.addEventListener(tableau.TableauEventType.ParameterChanged, () => {
+        fetchAndRender(worksheet, _dashboard);
+      });
+    }
+
+    // Re-render on filter change
+    worksheet.addEventListener(tableau.TableauEventType.FilterChanged, () => {
+      fetchAndRender(worksheet, _dashboard);
+    });
+
+  }).catch(() => {
+    // Outside Tableau — render with sample data for development
+    renderChart(getSampleData(CONFIG.chart), 'Illy Coffee', null);
+  });
+
+  // ─── DATA FETCHING ────────────────────────────────────────────────────────
+  async function fetchAndRender(worksheet, dashboard) {
+    try {
+      const dataTable = await worksheet.getSummaryDataAsync();
+      const cols = dataTable.columns;
+      const rows = dataTable.data;
+
+      const brandIdx     = cols.findIndex(c => c.fieldName === CONFIG.brandField);
+      const valueIdx     = cols.findIndex(c => c.fieldName === CONFIG.valueField);
+      const periodIdx    = cols.findIndex(c => c.fieldName === CONFIG.periodField);
+
+      if (brandIdx === -1 || valueIdx === -1) {
+        showError(`Fields not found. Looking for "${CONFIG.brandField}" and "${CONFIG.valueField}".`);
+        return;
+      }
+
+      const data = rows.map(row => {
+        const entry = {
+          name:  row[brandIdx].formattedValue || row[brandIdx].value,
+          value: parseFloat(row[valueIdx].value) || 0,
+        };
+        if (periodIdx !== -1) entry.period = row[periodIdx].formattedValue || row[periodIdx].value;
+        return entry;
+      }).filter(d => d.value > 0);
+
+      // Get selected brand from parameter
+      let selectedBrand = data[0]?.name || '';
+      const allParams = await dashboard.getParametersAsync();
+      const param = allParams.find(p => p.name === CONFIG.parameter);
+      if (param) selectedBrand = param.currentValue.formattedValue || param.currentValue.value;
+
+      renderChart(data, selectedBrand, dashboard);
+    } catch(err) {
+      showError('Data error: ' + err.message);
+    }
+  }
+
+  // ─── ROUTER ───────────────────────────────────────────────────────────────
+  function renderChart(data, selectedBrand, dashboard) {
+    const el = document.getElementById('chart');
+    el.innerHTML = '';
+    el.style.cssText = 'width:100%;height:100%;';
+    switch (CONFIG.chart) {
+      case 'donut':  renderDonut(el, data, selectedBrand, dashboard); break;
+      case 'bar':    renderBar(el, data, selectedBrand, dashboard);   break;
+      case 'line':   renderLine(el, data, selectedBrand, dashboard);  break;
+      case 'ban':    renderBAN(el, data, selectedBrand);              break;
+      default: showError(`Unknown chart type: "${CONFIG.chart}". Use donut, bar, line, or ban.`);
+    }
+  }
+
+  // ─── PARAMETER UPDATER ───────────────────────────────────────────────────
+  async function selectBrand(name, dashboard) {
+    if (!dashboard) return;
+    const allParams = await dashboard.getParametersAsync();
+    const param = allParams.find(p => p.name === CONFIG.parameter);
+    if (param) await param.changeValueAsync(name);
+  }
+
+  // ─── CHART: DONUT ─────────────────────────────────────────────────────────
+  function renderDonut(el, data, selectedBrand, dashboard) {
+    const W = el.clientWidth  || 480;
+    const H = el.clientHeight || 300;
+    const R = Math.min(H * 0.44, W * 0.28);
+    const inner = R * 0.46;
+
+    el.style.display = 'flex';
+    el.style.alignItems = 'center';
+    el.style.justifyContent = 'center';
+    el.style.gap = '20px';
+    el.style.padding = '12px';
+
+    // BAN left panel
+    const ban = document.createElement('div');
+    ban.style.cssText = 'display:flex;flex-direction:column;gap:6px;min-width:110px;';
+    const sel = data.find(d => d.name === selectedBrand) || data[0];
+    ban.innerHTML = `
+      <div style="font-size:${Math.max(36, R*0.5)}px;font-weight:400;line-height:1;color:${CONFIG.selectedColor};">${sel ? sel.value.toFixed(1) : '--'}</div>
+      <div style="font-size:11px;color:#aaa;letter-spacing:0.08em;text-transform:uppercase;">${sel ? sel.name : ''}</div>
+    `;
+    el.appendChild(ban);
+
+    // SVG donut
+    const svgEl = document.createElementNS('http://www.w3.org/2000/svg','svg');
+    svgEl.setAttribute('width',  R*2 + 24);
+    svgEl.setAttribute('height', R*2 + 24);
+    svgEl.style.flexShrink = '0';
+    el.appendChild(svgEl);
+
+    const svg = d3.select(svgEl);
+    const g = svg.append('g').attr('transform', `translate(${R+12},${R+12})`);
+
+    const arc      = d3.arc().innerRadius(inner).outerRadius(R).padAngle(0.028).cornerRadius(2);
+    const arcHover = d3.arc().innerRadius(inner).outerRadius(R+7).padAngle(0.028).cornerRadius(2);
+    const pie      = d3.pie().value(d => d.value).sort(null);
+
+    const paths = g.selectAll('path').data(pie(data)).join('path')
+      .attr('d', arc)
+      .attr('fill', d => d.data.name === selectedBrand ? CONFIG.selectedColor : CONFIG.neutralColor)
+      .attr('stroke', CONFIG.bgColor === 'transparent' ? '#2a2a2a' : CONFIG.bgColor)
+      .attr('stroke-width', 2)
+      .style('cursor', 'pointer');
+
+    paths
+      .on('mouseover', function() { d3.select(this).attr('d', arcHover); })
+      .on('mouseout',  function() { d3.select(this).attr('d', arc); })
+      .on('click', async (e, d) => {
+        await selectBrand(d.data.name, dashboard);
+        renderChart(data, d.data.name, dashboard);
+      });
+
+    g.append('circle')
+      .attr('r', inner - 2)
+      .attr('fill', CONFIG.bgColor === 'transparent' ? '#2a2a2a' : CONFIG.bgColor);
+
+    // Legend
+    const legend = document.createElement('div');
+    legend.style.cssText = 'display:flex;flex-direction:column;gap:7px;';
+    data.forEach(d => {
+      const isSelected = d.name === selectedBrand;
+      const item = document.createElement('div');
+      item.style.cssText = `display:flex;align-items:center;gap:7px;font-size:11px;color:${isSelected ? CONFIG.selectedColor : '#888'};cursor:pointer;`;
+      item.innerHTML = `
+        <span style="width:8px;height:8px;border-radius:50%;flex-shrink:0;background:${isSelected ? CONFIG.selectedColor : CONFIG.neutralColor};"></span>
+        <span style="flex:1;">${d.name}</span>
+        <span>${d.value.toFixed(1)}</span>
+      `;
+      item.onclick = async () => {
+        await selectBrand(d.name, dashboard);
+        renderChart(data, d.name, dashboard);
+      };
+      legend.appendChild(item);
+    });
+    el.appendChild(legend);
+  }
+
+  // ─── CHART: BAR ───────────────────────────────────────────────────────────
+  function renderBar(el, data, selectedBrand, dashboard) {
+    const W = el.clientWidth  || 500;
+    const H = el.clientHeight || 300;
+    const m = { top: 24, right: 16, bottom: 48, left: 16 };
+    const w = W - m.left - m.right;
+    const h = H - m.top  - m.bottom;
+
+    const sorted = [...data].sort((a, b) => b.value - a.value);
+
+    const svg = d3.select(el).append('svg').attr('width', W).attr('height', H);
+    const g   = svg.append('g').attr('transform', `translate(${m.left},${m.top})`);
+
+    const x = d3.scaleBand().domain(sorted.map(d => d.name)).range([0, w]).padding(0.28);
+    const y = d3.scaleLinear().domain([0, d3.max(data, d => d.value) * 1.15]).range([h, 0]);
+
+    // Bars
+    g.selectAll('rect').data(sorted).join('rect')
+      .attr('x', d => x(d.name))
+      .attr('y', d => y(d.value))
+      .attr('width',  x.bandwidth())
+      .attr('height', d => h - y(d.value))
+      .attr('fill',   d => d.name === selectedBrand ? CONFIG.selectedColor : CONFIG.neutralColor)
+      .attr('rx', 2)
+      .style('cursor', 'pointer')
+      .on('click', async (e, d) => {
+        await selectBrand(d.name, dashboard);
+        renderChart(data, d.name, dashboard);
+      });
+
+    // Value labels
+    g.selectAll('.vl').data(sorted).join('text')
+      .attr('class', 'vl')
+      .attr('x', d => x(d.name) + x.bandwidth() / 2)
+      .attr('y', d => y(d.value) - 5)
+      .attr('text-anchor', 'middle')
+      .style('fill',      d => d.name === selectedBrand ? CONFIG.selectedColor : '#888')
+      .style('font-size', '11px')
+      .style('font-family', 'Baskerville,serif')
+      .text(d => d.value.toFixed(1));
+
+    // X axis
+    g.append('g').attr('transform', `translate(0,${h})`).call(d3.axisBottom(x).tickSize(0))
+      .call(g => g.select('.domain').remove())
+      .selectAll('text')
+      .style('fill',        d => d === selectedBrand ? CONFIG.selectedColor : '#888')
+      .style('font-size',   '11px')
+      .style('font-family', 'Baskerville,serif')
+      .attr('dy', '1.4em');
+  }
+
+  // ─── CHART: LINE ──────────────────────────────────────────────────────────
+  function renderLine(el, data, selectedBrand, dashboard) {
+    const W = el.clientWidth  || 500;
+    const H = el.clientHeight || 300;
+    const m = { top: 20, right: 24, bottom: 40, left: 40 };
+    const w = W - m.left - m.right;
+    const h = H - m.top  - m.bottom;
+
+    // Check data has period field
+    if (!data[0]?.period) {
+      renderBar(el, data, selectedBrand, dashboard);
+      return;
+    }
+
+    const brands  = [...new Set(data.map(d => d.name))];
+    const periods = [...new Set(data.map(d => d.period))];
+
+    const grouped = brands.map(brand => ({
+      name:   brand,
+      values: periods.map(period => ({
+        period,
+        value: data.find(d => d.name === brand && d.period === period)?.value || null,
+      })).filter(d => d.value !== null),
+    }));
+
+    const svg = d3.select(el).append('svg').attr('width', W).attr('height', H);
+    const g   = svg.append('g').attr('transform', `translate(${m.left},${m.top})`);
+
+    const x = d3.scalePoint().domain(periods).range([0, w]).padding(0.1);
+    const y = d3.scaleLinear().domain([0, d3.max(data, d => d.value) * 1.1]).range([h, 0]);
+
+    const line = d3.line().defined(d => d.value !== null)
+      .x(d => x(d.period))
+      .y(d => y(d.value))
+      .curve(d3.curveMonotoneX);
+
+    // Draw non-selected lines first (behind)
+    grouped.filter(b => b.name !== selectedBrand).forEach(brand => {
+      g.append('path').datum(brand.values)
+        .attr('fill', 'none')
+        .attr('stroke', CONFIG.neutralColor)
+        .attr('stroke-width', 1)
+        .attr('opacity', 0.5)
+        .attr('d', line);
+    });
+
+    // Draw selected line on top
+    const selBrand = grouped.find(b => b.name === selectedBrand);
+    if (selBrand) {
+      g.append('path').datum(selBrand.values)
+        .attr('fill', 'none')
+        .attr('stroke', CONFIG.selectedColor)
+        .attr('stroke-width', 2.5)
+        .attr('d', line);
+
+      // Dots on selected line
+      g.selectAll('.dot').data(selBrand.values).join('circle')
+        .attr('class', 'dot')
+        .attr('cx', d => x(d.period))
+        .attr('cy', d => y(d.value))
+        .attr('r', 3.5)
+        .attr('fill', CONFIG.selectedColor);
+    }
+
+    // X axis
+    g.append('g').attr('transform', `translate(0,${h})`)
+      .call(d3.axisBottom(x).tickSize(3))
+      .call(g => g.select('.domain').attr('stroke','#555'))
+      .selectAll('text')
+      .style('fill', '#888').style('font-size', '11px').style('font-family','Baskerville,serif');
+
+    // Y axis
+    g.append('g')
+      .call(d3.axisLeft(y).ticks(4).tickSize(-w))
+      .call(g => g.select('.domain').remove())
+      .call(g => g.selectAll('.tick line').attr('stroke','#333').attr('stroke-dasharray','3,3'))
+      .selectAll('text')
+      .style('fill', '#888').style('font-size', '11px').style('font-family','Baskerville,serif');
+  }
+
+  // ─── CHART: BAN ───────────────────────────────────────────────────────────
+  function renderBAN(el, data, selectedBrand) {
+    const sel = data.find(d => d.name === selectedBrand) || data[0];
+    const W = el.clientWidth || 200;
+    const fontSize = Math.min(Math.max(W * 0.22, 40), 96);
+
+    el.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:8px;';
+    el.innerHTML = `
+      <div style="font-size:${fontSize}px;font-weight:400;line-height:1;color:${CONFIG.selectedColor};font-family:'Baskerville',serif;">${sel ? sel.value.toFixed(1) : '--'}</div>
+      <div style="font-size:12px;color:#aaa;letter-spacing:0.1em;text-transform:uppercase;">${sel ? sel.name : ''}</div>
+    `;
+  }
+
+  // ─── ERROR ────────────────────────────────────────────────────────────────
+  function showError(msg) {
+    document.getElementById('chart').innerHTML = `<div class="error">⚠ ${msg}</div>`;
+  }
+  </script>
+</body>
+</html>
