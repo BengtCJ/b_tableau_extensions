@@ -7,7 +7,7 @@
     <author name="BengtCJ" email="" organization="" website="https://bengtcj.github.io/b_tableau_extensions"/>
     <min-api-version>1.4</min-api-version>
     <source-location>
-      <url>https://bengtcj.github.io/b_tableau_extensions/index.html</url>
+      <url>https://bengtcj.github.io/b_tableau_extensions/index.html?chart=donut&amp;worksheet=vis_bss&amp;brandField=Brand%20Name%20Upper&amp;valueField=Raw%20Value&amp;parameter=Select%20Brand</url>
     </source-location>
     <icon>iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAABmJLR0QA/wD/AP+gvaeTAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAB3RJTUUH4wEIChUvnze4cAAAAB1pVFh0Q29tbWVudAAAAAAAQ3JlYXRlZCB3aXRoIEdJTVBkLmUHAAAAeklEQVQ4y2NgYGD4z8DAAAACAAFAgJ9AAAAAElFTkSuQmCC</icon>
     <permissions>
