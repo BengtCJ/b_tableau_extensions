@@ -4,11 +4,12 @@
     <default-locale>en_US</default-locale>
     <name resource-id="name">BP Chart Extensions</name>
     <description>Custom D3 charts for the BP Diagnostic Tool.</description>
-    <author name="BengtCJ" email="" organization="" website="https://bengtcj.github.io/b_tableau_extensions"/>
+    <author name="BengtCJ" email="" organization="" website=""/>
     <min-api-version>1.4</min-api-version>
     <source-location>
       <url>https://bengtcj.github.io/b_tableau_extensions/index.html</url>
     </source-location>
+    <icon>iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAF0lEQVQ4y2NgYGBg+E8GPgwMBBIHAAAkAAQAkJbGpQAAAABJRU5ErkJggg==</icon>
   </dashboard-extension>
   <resources>
     <resource id="name">
