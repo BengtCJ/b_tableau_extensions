@@ -45,6 +45,15 @@
     });
   }
 
+  // Re-render once iframe has settled to fix sizing
+  window.addEventListener('load', () => {
+    setTimeout(() => {
+      if (_lastData) {
+        renderChart(_lastData, _lastSelected, _dashboard);
+      }
+    }, 500);
+  });
+
   loadTableauAPI().then(() => {
     if (typeof tableau === 'undefined') {
       renderChart(getSampleData(CONFIG.chart), 'Illy Coffee', null);
