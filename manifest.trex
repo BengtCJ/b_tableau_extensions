@@ -3,16 +3,12 @@
   <dashboard-extension id="com.bengtcj.bp-charts" extension-version="1.0.0">
     <default-locale>en_US</default-locale>
     <name resource-id="name">BP Chart Extensions</name>
-    <description>Custom D3 charts for the BP Diagnostic Tool. Supports donut, bar, line, and BAN chart types via URL parameters.</description>
+    <description>Custom D3 charts for the BP Diagnostic Tool.</description>
     <author name="BengtCJ" email="" organization="" website="https://bengtcj.github.io/b_tableau_extensions"/>
     <min-api-version>1.4</min-api-version>
     <source-location>
       <url>https://bengtcj.github.io/b_tableau_extensions/index.html</url>
     </source-location>
-    <icon>iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAABmJLR0QA/wD/AP+gvaeTAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAB3RJTUUH4wEIChUvnze4cAAAAB1pVFh0Q29tbWVudAAAAAAAQ3JlYXRlZCB3aXRoIEdJTVBkLmUHAAAAeklEQVQ4y2NgYGD4z8DAAAACAAFAgJ9AAAAAElFTkSuQmCC</icon>
-    <permissions>
-      <permission>full data</permission>
-    </permissions>
   </dashboard-extension>
   <resources>
     <resource id="name">
