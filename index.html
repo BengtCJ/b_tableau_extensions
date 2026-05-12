@@ -75,10 +75,8 @@
       return;
     }
 
-    // Initial render
     await fetchAndRender(worksheet, _dashboard);
 
-    // Re-render on parameter change
     const allParams = await _dashboard.getParametersAsync();
     const param = allParams.find(p => p.name === CONFIG.parameter);
     if (param) {
@@ -87,22 +85,21 @@
       });
     }
 
-    // Re-render on filter change
     worksheet.addEventListener(tableau.TableauEventType.FilterChanged, () => {
       fetchAndRender(worksheet, _dashboard);
     });
 
   }).catch(() => {
-      renderChart(getSampleData(CONFIG.chart), 'Illy Coffee', null);
-    });
+    renderChart(getSampleData(CONFIG.chart), 'Illy Coffee', null);
+  });
 
-    // Fallback timeout in case API hangs
-    setTimeout(() => {
-      const el = document.getElementById('chart');
-      if (el.innerHTML.includes('Loading')) {
-        renderChart(getSampleData(CONFIG.chart), 'Illy Coffee', null);
-      }
-    }, 3000);
+  // Fallback timeout in case API hangs
+  setTimeout(() => {
+    const el = document.getElementById('chart');
+    if (el.innerHTML.includes('Loading')) {
+      renderChart(getSampleData(CONFIG.chart), 'Illy Coffee', null);
+    }
+  }, 3000);
 
   // ─── DATA FETCHING ────────────────────────────────────────────────────────
   async function fetchAndRender(worksheet, dashboard) {
