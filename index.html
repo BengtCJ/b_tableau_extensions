@@ -7,22 +7,18 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    html { width: 100%; height: 100%; }
-    body { 
-      background: transparent; 
-      font-family: 'Baskerville', 'Book Antiqua', serif; 
-      overflow: hidden; 
+    html, body { 
       width: 100%; 
-      height: 100%;
-      min-height: 100%;
+      height: 100%; 
+      background: transparent;
+      font-family: 'Baskerville', 'Book Antiqua', serif;
+      overflow: hidden;
     }
     #chart { 
       width: 100%; 
       height: 100%;
-      min-height: 100%;
-      position: absolute;
-      top: 0;
-      left: 0;
+      min-height: 300px;
+      display: block;
     }
     .error { color: #E8527A; font-size: 13px; padding: 16px; font-family: monospace; }
     .loading { color: #888; font-size: 13px; padding: 16px; }
@@ -210,9 +206,10 @@
   }
 
   // ─── CHART: DONUT ─────────────────────────────────────────────────────────
-  function renderDonut(el, data, selectedBrand, dashboard) {
-    const W = el.clientWidth  || 480;
-    const H = el.clientHeight || 300;
+function renderDonut(el, data, selectedBrand, dashboard) {
+  // Use ResizeObserver to get true container dimensions
+    const W = el.offsetWidth  || el.parentElement?.offsetWidth  || window.innerWidth  || 480;
+    const H = el.offsetHeight || el.parentElement?.offsetHeight || window.innerHeight || 300;
     const R = Math.min(H * 0.44, W * 0.28);
     const inner = R * 0.46;
 
@@ -434,6 +431,14 @@
   function showError(msg) {
     document.getElementById('chart').innerHTML = `<div class="error">⚠ ${msg}</div>`;
   }
+
+  // Re-render when container resizes
+  const resizeObserver = new ResizeObserver(() => {
+    if (_lastData) {
+      renderChart(_lastData, _lastSelected, _dashboard);
+    }
+  });
+  resizeObserver.observe(document.getElementById('chart'));
   </script>
 </body>
 </html>
