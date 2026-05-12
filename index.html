@@ -63,43 +63,48 @@
     ];
   }
 
-  // ─── TABLEAU INIT ─────────────────────────────────────────────────────────
+// ─── TABLEAU INIT ─────────────────────────────────────────────────────────
   let _dashboard = null;
 
-  tableau.extensions.initializeAsync().then(async () => {
-    _dashboard = tableau.extensions.dashboardContent.dashboard;
-
-    const worksheet = _dashboard.worksheets.find(ws => ws.name === CONFIG.worksheet);
-    if (!worksheet) {
-      showError(`Worksheet "${CONFIG.worksheet}" not found. Check the worksheet URL param.`);
-      return;
-    }
-
-    await fetchAndRender(worksheet, _dashboard);
-
-    const allParams = await _dashboard.getParametersAsync();
-    const param = allParams.find(p => p.name === CONFIG.parameter);
-    if (param) {
-      param.addEventListener(tableau.TableauEventType.ParameterChanged, () => {
-        fetchAndRender(worksheet, _dashboard);
-      });
-    }
-
-    worksheet.addEventListener(tableau.TableauEventType.FilterChanged, () => {
-      fetchAndRender(worksheet, _dashboard);
-    });
-
-  }).catch(() => {
-    renderChart(getSampleData(CONFIG.chart), 'Illy Coffee', null);
-  });
-
-  // Fallback timeout in case API hangs
+  // Fallback if Tableau API never loads
   setTimeout(() => {
     const el = document.getElementById('chart');
     if (el.innerHTML.includes('Loading')) {
       renderChart(getSampleData(CONFIG.chart), 'Illy Coffee', null);
     }
-  }, 3000);
+  }, 2000);
+
+  // Check if Tableau API is available
+  if (typeof tableau === 'undefined') {
+    renderChart(getSampleData(CONFIG.chart), 'Illy Coffee', null);
+  } else {
+    tableau.extensions.initializeAsync().then(async () => {
+      _dashboard = tableau.extensions.dashboardContent.dashboard;
+
+      const worksheet = _dashboard.worksheets.find(ws => ws.name === CONFIG.worksheet);
+      if (!worksheet) {
+        showError(`Worksheet "${CONFIG.worksheet}" not found.`);
+        return;
+      }
+
+      await fetchAndRender(worksheet, _dashboard);
+
+      const allParams = await _dashboard.getParametersAsync();
+      const param = allParams.find(p => p.name === CONFIG.parameter);
+      if (param) {
+        param.addEventListener(tableau.TableauEventType.ParameterChanged, () => {
+          fetchAndRender(worksheet, _dashboard);
+        });
+      }
+
+      worksheet.addEventListener(tableau.TableauEventType.FilterChanged, () => {
+        fetchAndRender(worksheet, _dashboard);
+      });
+
+    }).catch(() => {
+      renderChart(getSampleData(CONFIG.chart), 'Illy Coffee', null);
+    });
+  }
 
   // ─── DATA FETCHING ────────────────────────────────────────────────────────
   async function fetchAndRender(worksheet, dashboard) {
