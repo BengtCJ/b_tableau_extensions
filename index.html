@@ -4,7 +4,6 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>BP Chart Extensions</title>
-  <script src="https://extensions.tableausoftware.com/lib/tableau.extensions.1.latest.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -18,6 +17,27 @@
   <div id="chart"><div class="loading">Loading...</div></div>
 
   <script>
+  // Load Tableau API only if inside Tableau
+  function loadTableauAPI() {
+    return new Promise((resolve) => {
+      const script = document.createElement('script');
+      script.src = 'https://extensions.tableausoftware.com/lib/tableau.extensions.1.latest.js';
+      script.onload = resolve;
+      script.onerror = resolve; // resolve even on error so we fall through
+      document.head.appendChild(script);
+      // Timeout if script hangs
+      setTimeout(resolve, 2000);
+    });
+  }
+
+  loadTableauAPI().then(() => {
+    if (typeof tableau === 'undefined') {
+      renderChart(getSampleData(CONFIG.chart), 'Illy Coffee', null);
+      return;
+    }
+    // ... rest of your Tableau init code here
+  });
+
   // ─── CONFIG FROM URL PARAMS ───────────────────────────────────────────────
   const p = new URLSearchParams(window.location.search);
   const CONFIG = {
