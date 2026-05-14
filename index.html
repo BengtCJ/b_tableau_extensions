@@ -537,7 +537,11 @@
       let selectedBrand = data[0]?.name || '';
       const allParams = await dashboard.getParametersAsync();
       const param = allParams.find(p => p.name === CONFIG.parameter);
-      if (param) selectedBrand = param.currentValue.formattedValue || param.currentValue.value;
+      if (param) {
+        selectedBrand = param.currentValue.formattedValue || param.currentValue.value;
+      } else {
+        console.warn('Parameter "' + CONFIG.parameter + '" not found. Available params:', allParams.map(p => p.name).join(', '));
+      }
 
       renderChart(data, selectedBrand, dashboard);
     } catch(err) {
@@ -568,17 +572,13 @@
   // ─── MARK SELECTOR ───────────────────────────────────────────────────────
   async function selectBrand(name, dashboard) {
     if (!dashboard) return;
-    const worksheet = dashboard.worksheets.find(ws => ws.name === CONFIG.worksheet);
-    if (!worksheet) return;
     _suppressUntil = Date.now() + 1000;
-    try {
-      await worksheet.selectMarksByValueAsync(
-        [{ fieldName: CONFIG.brandField, value: name }],
-        tableau.SelectionUpdateType.Replace
-      );
-    } catch(e) {
-      console.warn('selectBrand failed:', name, e.message);
-    }
+    const criteria = [{ fieldName: CONFIG.brandField, value: name }];
+    await Promise.allSettled(
+      dashboard.worksheets.map(ws =>
+        ws.selectMarksByValueAsync(criteria, tableau.SelectionUpdateType.Replace)
+      )
+    );
   }
 
   // ─── CHART: DONUT ─────────────────────────────────────────────────────────
