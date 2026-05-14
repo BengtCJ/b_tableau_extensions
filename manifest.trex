@@ -7,7 +7,7 @@
     <author name="BengtCJ" email="" organization="" website="https://bengtcj.github.io"/>
     <min-api-version>1.4</min-api-version>
     <source-location>
-      <url>https://bengtcj.github.io/b_tableau_extensions/index.html?chart=donut&amp;bgColor=%232a2a2a</url>
+      <url>https://bengtcj.github.io/b_tableau_extensions/index.html</url>
     </source-location>
     <icon>iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAF0lEQVQ4y2NgYGBg+E8GPgwMBBIHAAAkAAQAkJbGpQAAAABJRU5ErkJggg==</icon>
   </dashboard-extension>
