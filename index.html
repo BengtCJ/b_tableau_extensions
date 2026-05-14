@@ -490,6 +490,7 @@
         return;
       }
 
+      try { await worksheet.clearSelectedMarksAsync(); } catch(e) {}
       await fetchAndRender(worksheet, _dashboard);
 
       const allParams = await _dashboard.getParametersAsync();
