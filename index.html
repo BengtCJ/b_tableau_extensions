@@ -566,16 +566,18 @@
     }
   }
 
-  // ─── PARAMETER UPDATER ───────────────────────────────────────────────────
+  // ─── MARK SELECTOR ───────────────────────────────────────────────────────
   async function selectBrand(name, dashboard) {
     if (!dashboard) return;
-    const allParams = await dashboard.getParametersAsync();
-    const param = allParams.find(p => p.name === CONFIG.parameter);
-    if (!param) return;
+    const worksheet = dashboard.worksheets.find(ws => ws.name === CONFIG.worksheet);
+    if (!worksheet) return;
     try {
-      await param.changeValueAsync(name);
+      await worksheet.selectMarksByValueAsync(
+        [{ fieldName: CONFIG.brandField, value: name }],
+        tableau.SelectionUpdateType.Replace
+      );
     } catch(e) {
-      console.warn('selectBrand failed for value:', JSON.stringify(name), e.message);
+      console.warn('selectBrand failed:', name, e.message);
     }
   }
 
@@ -637,7 +639,6 @@
       .on('mouseout',  function() { d3.select(this).attr('d', arc); })
       .on('click', async (e, d) => {
         await selectBrand(d.data.name, dashboard);
-        renderChart(data, d.data.name, dashboard);
       });
 
     g.append('circle')
@@ -665,7 +666,6 @@
       `;
       item.onclick = async () => {
         await selectBrand(d.name, dashboard);
-        renderChart(data, d.name, dashboard);
       };
       legend.appendChild(item);
     });
@@ -697,7 +697,6 @@
       .style('cursor', 'pointer')
       .on('click', async (e, d) => {
         await selectBrand(d.name, dashboard);
-        renderChart(data, d.name, dashboard);
       });
 
     g.selectAll('.vl').data(sorted).join('text')
