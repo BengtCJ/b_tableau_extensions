@@ -246,11 +246,11 @@
   };
 
   // ─── STATE ────────────────────────────────────────────────────────────────
-  let _dashboard     = null;
-  let _lastData      = null;
-  let _lastSelected  = null;
-  let _suppressUntil = 0;
-  let CONFIG         = { ...DEFAULTS };
+  let _dashboard      = null;
+  let _lastData       = null;
+  let _lastSelected   = null;
+  let _selectedBrand  = null;
+  let CONFIG          = { ...DEFAULTS };
 
   // ─── APPLY BACKGROUND ─────────────────────────────────────────────────────
   function applyBackground() {
@@ -509,7 +509,6 @@
 
   // ─── DATA FETCHING ────────────────────────────────────────────────────────
   async function fetchAndRender(worksheet, dashboard) {
-    if (Date.now() < _suppressUntil) return;
     try {
       const dataTable = await worksheet.getSummaryDataAsync();
       const cols = dataTable.columns;
@@ -534,18 +533,8 @@
         return entry;
       }).filter(d => d.value > 0);
 
-      let selectedBrand = data[0]?.name || '';
-      const allParams = await dashboard.getParametersAsync();
-      const param = allParams.find(p => p.name === CONFIG.parameter);
-      if (param) {
-        const raw = param.currentValue.formattedValue || param.currentValue.value;
-        const match = data.find(d => d.name.toLowerCase() === raw.toLowerCase());
-        selectedBrand = match ? match.name : raw;
-      } else {
-        console.warn('Parameter "' + CONFIG.parameter + '" not found. Available params:', allParams.map(p => p.name).join(', '));
-      }
-
-      renderChart(data, selectedBrand, dashboard);
+      if (!_selectedBrand) _selectedBrand = data[0]?.name || '';
+      renderChart(data, _selectedBrand, dashboard);
     } catch(err) {
       showError('Data error: ' + err.message);
     }
@@ -573,8 +562,9 @@
 
   // ─── MARK SELECTOR ───────────────────────────────────────────────────────
   async function selectBrand(name, dashboard) {
+    _selectedBrand = name;
+    if (_lastData) renderChart(_lastData, _selectedBrand, _dashboard);
     if (!dashboard) return;
-    _suppressUntil = Date.now() + 1000;
     const criteria = [{ fieldName: CONFIG.brandField, value: name }];
     await Promise.allSettled(
       dashboard.worksheets.map(ws =>
