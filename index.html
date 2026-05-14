@@ -53,7 +53,7 @@
       border: 1px solid #444;
       border-radius: 8px;
       padding: 20px;
-      width: 500px;
+      width: 720px;
       max-width: 95vw;
       color: #e6e6e6;
       font-family: 'Tableau Regular', Georgia, serif;
@@ -71,7 +71,7 @@
 
     .fields-grid {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: 1fr 1fr 1fr;
       gap: 10px 16px;
     }
 
@@ -431,6 +431,7 @@
       applyBackground();
       overlay.remove();
 
+      _selectedBrand = null;
       if (_dashboard) {
         const worksheet = _dashboard.worksheets.find(ws => ws.name === CONFIG.worksheet);
         if (worksheet) await fetchAndRender(worksheet, _dashboard);
