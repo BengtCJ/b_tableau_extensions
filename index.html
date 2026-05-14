@@ -445,14 +445,23 @@
 
   // ─── LOAD TABLEAU API ─────────────────────────────────────────────────────
   function loadTableauAPI() {
-    return new Promise((resolve) => {
-      const script = document.createElement('script');
-      script.src = 'https://extensions.tableausoftware.com/lib/tableau.extensions.1.latest.js';
-      script.onload = resolve;
-      script.onerror = resolve;
-      document.head.appendChild(script);
-      setTimeout(resolve, 2000);
-    });
+    const urls = [
+      'https://extensions.tableausoftware.com/lib/tableau.extensions.1.latest.js',
+      'https://unpkg.com/@tableau/extensions-api/lib/tableau.extensions.1.latest.js',
+      'https://cdn.jsdelivr.net/npm/@tableau/extensions-api/lib/tableau.extensions.1.latest.js',
+    ];
+    function tryLoad(i) {
+      return new Promise((resolve) => {
+        if (typeof tableau !== 'undefined') { resolve(); return; }
+        if (i >= urls.length) { resolve(); return; }
+        const script = document.createElement('script');
+        script.src = urls[i];
+        script.onload = resolve;
+        script.onerror = () => tryLoad(i + 1).then(resolve);
+        document.head.appendChild(script);
+      });
+    }
+    return tryLoad(0);
   }
 
   // ─── APPLY BACKGROUND IMMEDIATELY ────────────────────────────────────────
