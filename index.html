@@ -7,81 +7,105 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
+
     html, body {
       width: 100%;
       height: 100%;
-      font-family: 'Baskerville', 'Book Antiqua', serif;
+      background: #333333;
+      font-family: 'Tableau Regular', 'Tableau Light', 'Baskerville', Georgia, serif;
       overflow: hidden;
     }
+
     #chart {
       width: 100%;
       height: 100%;
       min-height: 300px;
       display: block;
     }
-    .error { color: #E8527A; font-size: 13px; padding: 16px; font-family: monospace; }
-    .loading { color: #888; font-size: 13px; padding: 16px; }
+
+    .error {
+      color: #e994a2;
+      font-size: 13px;
+      padding: 16px;
+      font-family: monospace;
+    }
+
+    .loading {
+      color: #666666;
+      font-size: 13px;
+      padding: 16px;
+      font-family: 'Tableau Light', Georgia, serif;
+    }
 
     /* ── Settings Dialog ── */
     #settings-overlay {
       position: fixed;
       inset: 0;
-      background: rgba(0,0,0,0.7);
+      background: rgba(0,0,0,0.75);
       display: flex;
       align-items: center;
       justify-content: center;
       z-index: 9999;
     }
+
     #settings-dialog {
-      background: #1e1e1e;
+      background: #222222;
       border: 1px solid #444;
       border-radius: 8px;
       padding: 20px;
       width: 500px;
       max-width: 95vw;
-      color: #ccc;
-      font-family: 'Baskerville', serif;
+      color: #e6e6e6;
+      font-family: 'Tableau Regular', Georgia, serif;
     }
+
     #settings-dialog h2 {
-      font-size: 16px;
-      color: #E8527A;
+      font-size: 15px;
+      color: #e994a2;
       margin-bottom: 16px;
       font-weight: 400;
-      letter-spacing: 0.05em;
+      letter-spacing: 0.06em;
+      font-family: 'Baskerville', Georgia, serif;
+      font-style: italic;
     }
+
     .fields-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 10px 16px;
     }
-    .field {
-      margin-bottom: 0;
-    }
-    .field-full {
-      grid-column: 1 / -1;
-    }
+
+    .field { margin-bottom: 0; }
+    .field-full { grid-column: 1 / -1; }
+
     .field label {
       display: block;
       font-size: 10px;
-      color: #888;
+      color: #666666;
       text-transform: uppercase;
       letter-spacing: 0.08em;
       margin-bottom: 3px;
+      font-family: 'Tableau Light', Georgia, serif;
     }
-    .field select, .field input[type="text"] {
+
+    .field select,
+    .field input[type="text"] {
       width: 100%;
       background: #2a2a2a;
       border: 1px solid #444;
       border-radius: 4px;
-      color: #ccc;
+      color: #e6e6e6;
       padding: 4px 8px;
       font-size: 12px;
-      font-family: 'Baskerville', serif;
+      font-family: 'Tableau Regular', Georgia, serif;
       outline: none;
     }
-    .field select:focus, .field input:focus {
-      border-color: #E8527A;
+
+    .field select:focus,
+    .field input:focus {
+      border-color: #e994a2;
     }
+
     .field input[type="color"] {
       width: 100%;
       height: 30px;
@@ -91,29 +115,34 @@
       border-radius: 4px;
       cursor: pointer;
     }
+
     .field .hint {
       font-size: 10px;
       color: #555;
       margin-top: 3px;
+      font-family: 'Tableau Light', Georgia, serif;
     }
+
     .settings-footer {
       display: flex;
       gap: 10px;
       margin-top: 16px;
       justify-content: flex-end;
     }
+
     .btn {
       padding: 6px 16px;
       border-radius: 4px;
       border: none;
       cursor: pointer;
       font-size: 12px;
-      font-family: 'Baskerville', serif;
+      font-family: 'Tableau Regular', Georgia, serif;
       letter-spacing: 0.05em;
     }
-    .btn-primary { background: #E8527A; color: white; }
-    .btn-primary:hover { background: #d4415f; }
-    .btn-secondary { background: #333; color: #aaa; border: 1px solid #444; }
+
+    .btn-primary { background: #e994a2; color: #222; }
+    .btn-primary:hover { background: #d4778a; }
+    .btn-secondary { background: #333; color: #e6e6e6; border: 1px solid #444; }
     .btn-secondary:hover { background: #3a3a3a; }
 
     /* ── Configure gear button ── */
@@ -123,10 +152,10 @@
       right: 8px;
       width: 26px;
       height: 26px;
-      background: rgba(232,82,122,0.15);
-      border: 1px solid #E8527A;
+      background: rgba(233,148,162,0.15);
+      border: 1px solid #e994a2;
       border-radius: 50%;
-      color: #E8527A;
+      color: #e994a2;
       font-size: 13px;
       cursor: pointer;
       display: flex;
@@ -144,6 +173,16 @@
   <button id="configure-btn" title="Configure chart">⚙</button>
 
   <script>
+  // ─── FONTS ────────────────────────────────────────────────────────────────
+  const FONT_TITLE  = "'Baskerville', Georgia, serif";          // italic headings
+  const FONT_BODY   = "'Tableau Regular', Georgia, serif";      // body text
+  const FONT_LIGHT  = "'Tableau Light', Georgia, serif";        // light/secondary text
+
+  // ─── COLOURS ──────────────────────────────────────────────────────────────
+  const COL_WHITE      = '#ffffff';
+  const COL_LIGHT_GREY = '#e6e6e6';
+  const COL_DARK_GREY  = '#666666';
+
   // ─── DEFAULT CONFIG ───────────────────────────────────────────────────────
   const DEFAULTS = {
     chart:         'donut',
@@ -152,9 +191,9 @@
     valueField:    'Raw Value',
     periodField:   'Quarter',
     parameter:     'Select Brand',
-    selectedColor: '#E8527A',
-    neutralColor:  '#5a5a5a',
-    bgColor:       '#2a2a2a',
+    selectedColor: '#e994a2',
+    neutralColor:  '#7d7d7d',
+    bgColor:       '#333333',
   };
 
   // ─── STATE ────────────────────────────────────────────────────────────────
@@ -281,7 +320,10 @@
           const settings = tableau.extensions.settings;
           Object.entries(CONFIG).forEach(([k, v]) => settings.set(k, v));
           await settings.saveAsync();
-        } catch(e) {}
+          console.log('Settings saved:', JSON.stringify(CONFIG));
+        } catch(e) {
+          console.warn('Settings save failed:', e);
+        }
       }
 
       applyBackground();
@@ -346,6 +388,9 @@
         const val = settings.get(k);
         if (val) CONFIG[k] = val;
       });
+
+      console.log('Loaded CONFIG:', JSON.stringify(CONFIG));
+      console.log('All settings:', JSON.stringify(settings.getAll()));
 
       applyBackground();
 
@@ -461,8 +506,8 @@
     ban.style.cssText = 'display:flex;flex-direction:column;gap:6px;min-width:110px;';
     const sel = data.find(d => d.name === selectedBrand) || data[0];
     ban.innerHTML = `
-      <div style="font-size:${Math.max(36, R*0.5)}px;font-weight:400;line-height:1;color:${CONFIG.selectedColor};">${sel ? sel.value.toFixed(1) : '--'}</div>
-      <div style="font-size:11px;color:#aaa;letter-spacing:0.08em;text-transform:uppercase;">${sel ? sel.name : ''}</div>
+      <div style="font-size:${Math.max(36, R*0.5)}px;font-weight:400;line-height:1;color:${CONFIG.selectedColor};font-family:${FONT_TITLE};font-style:italic;">${sel ? sel.value.toFixed(1) : '--'}</div>
+      <div style="font-size:11px;color:${COL_LIGHT_GREY};letter-spacing:0.08em;text-transform:uppercase;font-family:${FONT_LIGHT};">${sel ? sel.name : ''}</div>
     `;
     el.appendChild(ban);
 
@@ -499,11 +544,11 @@
     data.forEach(d => {
       const isSelected = d.name === selectedBrand;
       const item = document.createElement('div');
-      item.style.cssText = `display:flex;align-items:center;gap:7px;font-size:11px;color:${isSelected ? CONFIG.selectedColor : '#888'};cursor:pointer;`;
+      item.style.cssText = `display:flex;align-items:center;gap:7px;font-size:11px;color:${isSelected ? CONFIG.selectedColor : COL_DARK_GREY};cursor:pointer;font-family:${FONT_BODY};`;
       item.innerHTML = `
         <span style="width:8px;height:8px;border-radius:50%;flex-shrink:0;background:${isSelected ? CONFIG.selectedColor : CONFIG.neutralColor};"></span>
         <span style="flex:1;">${d.name}</span>
-        <span>${d.value.toFixed(1)}</span>
+        <span style="color:${isSelected ? CONFIG.selectedColor : COL_LIGHT_GREY};">${d.value.toFixed(1)}</span>
       `;
       item.onclick = async () => {
         await selectBrand(d.name, dashboard);
@@ -547,17 +592,17 @@
       .attr('x', d => x(d.name) + x.bandwidth() / 2)
       .attr('y', d => y(d.value) - 5)
       .attr('text-anchor', 'middle')
-      .style('fill',        d => d.name === selectedBrand ? CONFIG.selectedColor : '#888')
+      .style('fill',        d => d.name === selectedBrand ? CONFIG.selectedColor : COL_LIGHT_GREY)
       .style('font-size',   '11px')
-      .style('font-family', 'Baskerville,serif')
+      .style('font-family', FONT_BODY)
       .text(d => d.value.toFixed(1));
 
     g.append('g').attr('transform', `translate(0,${h})`).call(d3.axisBottom(x).tickSize(0))
       .call(g => g.select('.domain').remove())
       .selectAll('text')
-      .style('fill',        d => d === selectedBrand ? CONFIG.selectedColor : '#888')
+      .style('fill',        d => d === selectedBrand ? CONFIG.selectedColor : COL_DARK_GREY)
       .style('font-size',   '11px')
-      .style('font-family', 'Baskerville,serif')
+      .style('font-family', FONT_BODY)
       .attr('dy', '1.4em');
   }
 
@@ -611,16 +656,20 @@
 
     g.append('g').attr('transform', `translate(0,${h})`)
       .call(d3.axisBottom(x).tickSize(3))
-      .call(g => g.select('.domain').attr('stroke', '#555'))
+      .call(g => g.select('.domain').attr('stroke', COL_DARK_GREY))
       .selectAll('text')
-      .style('fill', '#888').style('font-size', '11px').style('font-family', 'Baskerville,serif');
+      .style('fill', COL_DARK_GREY)
+      .style('font-size', '11px')
+      .style('font-family', FONT_BODY);
 
     g.append('g')
       .call(d3.axisLeft(y).ticks(4).tickSize(-w))
       .call(g => g.select('.domain').remove())
-      .call(g => g.selectAll('.tick line').attr('stroke', '#333').attr('stroke-dasharray', '3,3'))
+      .call(g => g.selectAll('.tick line').attr('stroke', '#444').attr('stroke-dasharray', '3,3'))
       .selectAll('text')
-      .style('fill', '#888').style('font-size', '11px').style('font-family', 'Baskerville,serif');
+      .style('fill', COL_DARK_GREY)
+      .style('font-size', '11px')
+      .style('font-family', FONT_BODY);
   }
 
   // ─── CHART: BAN ───────────────────────────────────────────────────────────
@@ -637,8 +686,8 @@
     el.style.gap            = '8px';
 
     el.innerHTML = `
-      <div style="font-size:${fontSize}px;font-weight:400;line-height:1;color:${CONFIG.selectedColor};font-family:'Baskerville',serif;">${sel ? sel.value.toFixed(1) : '--'}</div>
-      <div style="font-size:12px;color:#aaa;letter-spacing:0.1em;text-transform:uppercase;">${sel ? sel.name : ''}</div>
+      <div style="font-size:${fontSize}px;font-weight:400;line-height:1;color:${CONFIG.selectedColor};font-family:${FONT_TITLE};font-style:italic;">${sel ? sel.value.toFixed(1) : '--'}</div>
+      <div style="font-size:12px;color:${COL_LIGHT_GREY};letter-spacing:0.1em;text-transform:uppercase;font-family:${FONT_LIGHT};">${sel ? sel.name : ''}</div>
     `;
   }
 
