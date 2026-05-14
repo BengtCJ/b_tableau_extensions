@@ -533,7 +533,17 @@
         return entry;
       }).filter(d => d.value > 0);
 
-      if (!_selectedBrand) _selectedBrand = data[0]?.name || '';
+      if (!_selectedBrand) {
+        const allParams = await dashboard.getParametersAsync();
+        const param = allParams.find(p => p.name === CONFIG.parameter);
+        if (param) {
+          const raw = param.currentValue.formattedValue || param.currentValue.value;
+          const match = data.find(d => d.name.toLowerCase() === raw.toLowerCase());
+          _selectedBrand = match ? match.name : (data[0]?.name || '');
+        } else {
+          _selectedBrand = data[0]?.name || '';
+        }
+      }
       renderChart(data, _selectedBrand, dashboard);
     } catch(err) {
       showError('Data error: ' + err.message);
