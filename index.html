@@ -467,14 +467,6 @@
   // ─── APPLY BACKGROUND IMMEDIATELY ────────────────────────────────────────
   applyBackground();
 
-  // ─── FALLBACK ─────────────────────────────────────────────────────────────
-  setTimeout(() => {
-    const el = document.getElementById('chart');
-    if (el.innerHTML.includes('Loading')) {
-      showSettings(null);
-    }
-  }, 3000);
-
   // ─── TABLEAU INIT ─────────────────────────────────────────────────────────
   loadTableauAPI().then(() => {
     if (typeof tableau === 'undefined') {
@@ -526,7 +518,8 @@
         fetchAndRender(worksheet, _dashboard);
       });
 
-    }).catch(() => {
+    }).catch((err) => {
+      console.error('initializeAsync failed:', err);
       showSettings(null);
     });
   });
