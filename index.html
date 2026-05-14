@@ -500,9 +500,6 @@
         });
       }
 
-      worksheet.addEventListener(tableau.TableauEventType.FilterChanged, () => {
-        fetchAndRender(worksheet, _dashboard);
-      });
 
     }).catch((err) => {
       console.error('initializeAsync failed:', err);
@@ -514,7 +511,7 @@
   async function fetchAndRender(worksheet, dashboard) {
     if (Date.now() < _suppressUntil) return;
     try {
-      const dataTable = await worksheet.getSummaryDataAsync();
+      const dataTable = await worksheet.getSummaryDataAsync({ ignoreSelection: true });
       const cols = dataTable.columns;
       const rows = dataTable.data;
 
