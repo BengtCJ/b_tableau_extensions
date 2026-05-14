@@ -37,73 +37,83 @@
       border: 1px solid #444;
       border-radius: 8px;
       padding: 20px;
-      width: 460px;
+      width: 500px;
       max-width: 95vw;
       color: #ccc;
       font-family: 'Baskerville', serif;
     }
     #settings-dialog h2 {
-      font-size: 18px;
+      font-size: 16px;
       color: #E8527A;
-      margin-bottom: 20px;
+      margin-bottom: 16px;
       font-weight: 400;
       letter-spacing: 0.05em;
     }
+    .fields-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px 16px;
+    }
     .field {
-      margin-bottom: 14px;
+      margin-bottom: 0;
+    }
+    .field-full {
+      grid-column: 1 / -1;
     }
     .field label {
       display: block;
-      font-size: 11px;
+      font-size: 10px;
       color: #888;
       text-transform: uppercase;
       letter-spacing: 0.08em;
-      margin-bottom: 5px;
+      margin-bottom: 3px;
     }
-    .field select, .field input {
+    .field select, .field input[type="text"] {
       width: 100%;
       background: #2a2a2a;
       border: 1px solid #444;
       border-radius: 4px;
       color: #ccc;
-      padding: 7px 10px;
-      font-size: 13px;
+      padding: 4px 8px;
+      font-size: 12px;
       font-family: 'Baskerville', serif;
       outline: none;
     }
     .field select:focus, .field input:focus {
       border-color: #E8527A;
     }
+    .field input[type="color"] {
+      width: 100%;
+      height: 30px;
+      padding: 2px;
+      background: #2a2a2a;
+      border: 1px solid #444;
+      border-radius: 4px;
+      cursor: pointer;
+    }
     .field .hint {
-      font-size: 11px;
-      color: #666;
-      margin-top: 4px;
+      font-size: 10px;
+      color: #555;
+      margin-top: 3px;
     }
     .settings-footer {
       display: flex;
       gap: 10px;
-      margin-top: 20px;
+      margin-top: 16px;
       justify-content: flex-end;
     }
     .btn {
-      padding: 8px 18px;
+      padding: 6px 16px;
       border-radius: 4px;
       border: none;
       cursor: pointer;
-      font-size: 13px;
+      font-size: 12px;
       font-family: 'Baskerville', serif;
       letter-spacing: 0.05em;
     }
-    .btn-primary {
-      background: #E8527A;
-      color: white;
-    }
+    .btn-primary { background: #E8527A; color: white; }
     .btn-primary:hover { background: #d4415f; }
-    .btn-secondary {
-      background: #333;
-      color: #aaa;
-      border: 1px solid #444;
-    }
+    .btn-secondary { background: #333; color: #aaa; border: 1px solid #444; }
     .btn-secondary:hover { background: #3a3a3a; }
 
     /* ── Configure gear button ── */
@@ -111,13 +121,13 @@
       position: fixed;
       bottom: 8px;
       right: 8px;
-      width: 28px;
-      height: 28px;
+      width: 26px;
+      height: 26px;
       background: rgba(232,82,122,0.15);
       border: 1px solid #E8527A;
       border-radius: 50%;
       color: #E8527A;
-      font-size: 14px;
+      font-size: 13px;
       cursor: pointer;
       display: flex;
       align-items: center;
@@ -195,54 +205,57 @@
     overlay.innerHTML = `
       <div id="settings-dialog">
         <h2>⚙ Chart Settings</h2>
+        <div class="fields-grid">
 
-        <div class="field">
-          <label>Chart Type</label>
-          <select id="s-chart">
-            <option value="donut"  ${CONFIG.chart==='donut' ?'selected':''}>Donut</option>
-            <option value="bar"    ${CONFIG.chart==='bar'   ?'selected':''}>Bar</option>
-            <option value="line"   ${CONFIG.chart==='line'  ?'selected':''}>Line</option>
-            <option value="ban"    ${CONFIG.chart==='ban'   ?'selected':''}>BAN (Headline Number)</option>
-          </select>
+          <div class="field">
+            <label>Chart Type</label>
+            <select id="s-chart">
+              <option value="donut" ${CONFIG.chart==='donut'?'selected':''}>Donut</option>
+              <option value="bar"   ${CONFIG.chart==='bar'  ?'selected':''}>Bar</option>
+              <option value="line"  ${CONFIG.chart==='line' ?'selected':''}>Line</option>
+              <option value="ban"   ${CONFIG.chart==='ban'  ?'selected':''}>BAN (Headline Number)</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label>Worksheet</label>
+            <select id="s-worksheet">${worksheetOptions}</select>
+            <div class="hint">Source of brand data</div>
+          </div>
+
+          <div class="field">
+            <label>Brand Field</label>
+            <input id="s-brandField" type="text" value="${CONFIG.brandField}">
+          </div>
+
+          <div class="field">
+            <label>Value Field</label>
+            <input id="s-valueField" type="text" value="${CONFIG.valueField}">
+          </div>
+
+          <div class="field">
+            <label>Period Field <span style="color:#555">(line only)</span></label>
+            <input id="s-periodField" type="text" value="${CONFIG.periodField}">
+          </div>
+
+          <div class="field">
+            <label>Select Brand Parameter</label>
+            <input id="s-parameter" type="text" value="${CONFIG.parameter}">
+          </div>
+
+          <div class="field">
+            <label>Background Colour</label>
+            <input id="s-bgColor" type="color" value="${CONFIG.bgColor}">
+            <div class="hint">Match dashboard background</div>
+          </div>
+
+          <div class="field">
+            <label>Highlight Colour</label>
+            <input id="s-selectedColor" type="color" value="${CONFIG.selectedColor}">
+            <div class="hint">Selected brand colour</div>
+          </div>
+
         </div>
-
-        <div class="field">
-          <label>Worksheet</label>
-          <select id="s-worksheet">${worksheetOptions}</select>
-          <div class="hint">Worksheet that contains your brand data</div>
-        </div>
-
-        <div class="field">
-          <label>Brand Field</label>
-          <input id="s-brandField" type="text" value="${CONFIG.brandField}">
-        </div>
-
-        <div class="field">
-          <label>Value Field</label>
-          <input id="s-valueField" type="text" value="${CONFIG.valueField}">
-        </div>
-
-        <div class="field">
-          <label>Period Field <span style="color:#666">(line chart only)</span></label>
-          <input id="s-periodField" type="text" value="${CONFIG.periodField}">
-        </div>
-
-        <div class="field">
-          <label>Select Brand Parameter</label>
-          <input id="s-parameter" type="text" value="${CONFIG.parameter}">
-        </div>
-
-        <div class="field">
-          <label>Background Colour</label>
-          <input id="s-bgColor" type="color" value="${CONFIG.bgColor}" style="height:36px;padding:2px;">
-          <div class="hint">Match your dashboard background</div>
-        </div>
-
-        <div class="field">
-          <label>Highlight Colour</label>
-          <input id="s-selectedColor" type="color" value="${CONFIG.selectedColor}" style="height:36px;padding:2px;">
-        </div>
-
         <div class="settings-footer">
           <button class="btn btn-secondary" id="s-cancel">Cancel</button>
           <button class="btn btn-primary" id="s-save">Save & Render</button>
@@ -263,13 +276,12 @@
       CONFIG.bgColor       = document.getElementById('s-bgColor').value;
       CONFIG.selectedColor = document.getElementById('s-selectedColor').value;
 
-      // Save to Tableau settings if available
       if (_dashboard) {
         try {
           const settings = tableau.extensions.settings;
           Object.entries(CONFIG).forEach(([k, v]) => settings.set(k, v));
           await settings.saveAsync();
-        } catch(e) { /* outside Tableau */ }
+        } catch(e) {}
       }
 
       applyBackground();
@@ -285,9 +297,7 @@
   }
 
   document.getElementById('configure-btn').onclick = () => {
-    const worksheets = _dashboard
-      ? _dashboard.worksheets.map(ws => ws.name)
-      : null;
+    const worksheets = _dashboard ? _dashboard.worksheets.map(ws => ws.name) : null;
     showSettings(worksheets);
   };
 
@@ -331,7 +341,6 @@
     }}).then(async () => {
       _dashboard = tableau.extensions.dashboardContent.dashboard;
 
-      // Load saved settings
       const settings = tableau.extensions.settings;
       Object.keys(DEFAULTS).forEach(k => {
         const val = settings.get(k);
@@ -340,7 +349,6 @@
 
       applyBackground();
 
-      // If no worksheet configured yet, show settings
       if (!CONFIG.worksheet) {
         const worksheets = _dashboard.worksheets.map(ws => ws.name);
         showSettings(worksheets);
@@ -356,7 +364,6 @@
 
       await fetchAndRender(worksheet, _dashboard);
 
-      // Listen for parameter changes
       const allParams = await _dashboard.getParametersAsync();
       const param = allParams.find(p => p.name === CONFIG.parameter);
       if (param) {
@@ -365,7 +372,6 @@
         });
       }
 
-      // Listen for filter changes
       worksheet.addEventListener(tableau.TableauEventType.FilterChanged, () => {
         fetchAndRender(worksheet, _dashboard);
       });
