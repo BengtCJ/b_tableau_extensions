@@ -571,7 +571,12 @@
     if (!dashboard) return;
     const allParams = await dashboard.getParametersAsync();
     const param = allParams.find(p => p.name === CONFIG.parameter);
-    if (param) await param.changeValueAsync(name);
+    if (!param) return;
+    try {
+      await param.changeValueAsync(name);
+    } catch(e) {
+      console.warn('selectBrand failed for value:', JSON.stringify(name), e.message);
+    }
   }
 
   // ─── CHART: DONUT ─────────────────────────────────────────────────────────
