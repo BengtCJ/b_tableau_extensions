@@ -446,9 +446,9 @@
   // ─── LOAD TABLEAU API ─────────────────────────────────────────────────────
   function loadTableauAPI() {
     const urls = [
+      'tableau.extensions.js',
       'https://extensions.tableausoftware.com/lib/tableau.extensions.1.latest.js',
-      'https://unpkg.com/@tableau/extensions-api/lib/tableau.extensions.1.latest.js',
-      'https://cdn.jsdelivr.net/npm/@tableau/extensions-api/lib/tableau.extensions.1.latest.js',
+      'https://raw.githubusercontent.com/tableau/extensions-api/main/lib/tableau.extensions.1.latest.js',
     ];
     function tryLoad(i) {
       return new Promise((resolve) => {
