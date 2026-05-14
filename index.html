@@ -283,10 +283,23 @@
     ];
   }
 
+  // ─── COLUMN DISCOVERY ────────────────────────────────────────────────────────
+  async function loadColumnOptions(worksheetName) {
+    if (!_dashboard || !worksheetName) return [];
+    const ws = _dashboard.worksheets.find(w => w.name === worksheetName);
+    if (!ws) return [];
+    try {
+      const dt = await ws.getSummaryDataAsync({ maxRows: 1 });
+      return dt.columns.map(c => c.fieldName);
+    } catch(e) { return []; }
+  }
+
   // ─── SETTINGS DIALOG ─────────────────────────────────────────────────────
-  function showSettings(worksheets) {
+  async function showSettings(worksheets) {
     const existing = document.getElementById('settings-overlay');
     if (existing) existing.remove();
+
+    const columns = await loadColumnOptions(CONFIG.worksheet);
 
     const overlay = document.createElement('div');
     overlay.id = 'settings-overlay';
@@ -298,9 +311,12 @@
       ? worksheets.map(ws => `<option value="${ws}" ${ws === CONFIG.worksheet ? 'selected' : ''}>${ws}</option>`).join('')
       : `<option value="${CONFIG.worksheet}">${CONFIG.worksheet || 'No worksheets found'}</option>`;
 
+    const colOptions = columns.map(c => `<option value="${c}">`).join('');
+
     overlay.innerHTML = `
       <div id="settings-dialog">
         <h2>⚙ Chart Settings</h2>
+        <datalist id="s-columns">${colOptions}</datalist>
         <div class="fields-grid">
 
           <div class="field">
@@ -321,17 +337,17 @@
 
           <div class="field">
             <label>Brand Field</label>
-            <input id="s-brandField" type="text" value="${CONFIG.brandField}">
+            <input id="s-brandField" type="text" value="${CONFIG.brandField}" list="s-columns">
           </div>
 
           <div class="field">
             <label>Value Field</label>
-            <input id="s-valueField" type="text" value="${CONFIG.valueField}">
+            <input id="s-valueField" type="text" value="${CONFIG.valueField}" list="s-columns">
           </div>
 
           <div class="field">
             <label>Period Field <span style="color:#555">(line only)</span></label>
-            <input id="s-periodField" type="text" value="${CONFIG.periodField}">
+            <input id="s-periodField" type="text" value="${CONFIG.periodField}" list="s-columns">
           </div>
 
           <div class="field">
@@ -369,6 +385,12 @@
     `;
 
     document.body.appendChild(overlay);
+
+    // Reload column suggestions when worksheet changes
+    document.getElementById('s-worksheet').addEventListener('change', async function() {
+      const cols = await loadColumnOptions(this.value);
+      document.getElementById('s-columns').innerHTML = cols.map(c => `<option value="${c}">`).join('');
+    });
 
     // Toggle colour picker when checkbox changes
     const checkbox = document.getElementById('s-transparent');
@@ -416,9 +438,9 @@
     };
   }
 
-  document.getElementById('configure-btn').onclick = () => {
+  document.getElementById('configure-btn').onclick = async () => {
     const worksheets = _dashboard ? _dashboard.worksheets.map(ws => ws.name) : null;
-    showSettings(worksheets);
+    await showSettings(worksheets);
   };
 
   // ─── LOAD TABLEAU API ─────────────────────────────────────────────────────
@@ -512,7 +534,8 @@
       const periodIdx = cols.findIndex(c => c.fieldName === CONFIG.periodField);
 
       if (brandIdx === -1 || valueIdx === -1) {
-        showError(`Fields not found. Looking for "${CONFIG.brandField}" and "${CONFIG.valueField}".`);
+        const available = cols.map(c => c.fieldName).join(', ');
+        showError(`Field not found. Need "${CONFIG.brandField}" + "${CONFIG.valueField}". Available: ${available}`);
         return;
       }
 
