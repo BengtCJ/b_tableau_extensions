@@ -10,7 +10,6 @@
     html, body {
       width: 100%;
       height: 100%;
-      background: transparent;
       font-family: 'Baskerville', 'Book Antiqua', serif;
       overflow: hidden;
     }
@@ -19,36 +18,140 @@
       height: 100%;
       min-height: 300px;
       display: block;
-      background: transparent;
     }
     .error { color: #E8527A; font-size: 13px; padding: 16px; font-family: monospace; }
     .loading { color: #888; font-size: 13px; padding: 16px; }
+
+    /* ── Settings Dialog ── */
+    #settings-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+    #settings-dialog {
+      background: #1e1e1e;
+      border: 1px solid #444;
+      border-radius: 8px;
+      padding: 24px;
+      width: 360px;
+      max-width: 90vw;
+      color: #ccc;
+      font-family: 'Baskerville', serif;
+    }
+    #settings-dialog h2 {
+      font-size: 18px;
+      color: #E8527A;
+      margin-bottom: 20px;
+      font-weight: 400;
+      letter-spacing: 0.05em;
+    }
+    .field {
+      margin-bottom: 14px;
+    }
+    .field label {
+      display: block;
+      font-size: 11px;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 5px;
+    }
+    .field select, .field input {
+      width: 100%;
+      background: #2a2a2a;
+      border: 1px solid #444;
+      border-radius: 4px;
+      color: #ccc;
+      padding: 7px 10px;
+      font-size: 13px;
+      font-family: 'Baskerville', serif;
+      outline: none;
+    }
+    .field select:focus, .field input:focus {
+      border-color: #E8527A;
+    }
+    .field .hint {
+      font-size: 11px;
+      color: #666;
+      margin-top: 4px;
+    }
+    .settings-footer {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+      justify-content: flex-end;
+    }
+    .btn {
+      padding: 8px 18px;
+      border-radius: 4px;
+      border: none;
+      cursor: pointer;
+      font-size: 13px;
+      font-family: 'Baskerville', serif;
+      letter-spacing: 0.05em;
+    }
+    .btn-primary {
+      background: #E8527A;
+      color: white;
+    }
+    .btn-primary:hover { background: #d4415f; }
+    .btn-secondary {
+      background: #333;
+      color: #aaa;
+      border: 1px solid #444;
+    }
+    .btn-secondary:hover { background: #3a3a3a; }
+
+    /* ── Configure gear button ── */
+    #configure-btn {
+      position: fixed;
+      bottom: 8px;
+      right: 8px;
+      width: 28px;
+      height: 28px;
+      background: rgba(232,82,122,0.15);
+      border: 1px solid #E8527A;
+      border-radius: 50%;
+      color: #E8527A;
+      font-size: 14px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      opacity: 0.4;
+      transition: opacity 0.2s;
+    }
+    #configure-btn:hover { opacity: 1; }
   </style>
 </head>
 <body>
   <div id="chart"><div class="loading">Loading...</div></div>
+  <button id="configure-btn" title="Configure chart">⚙</button>
 
   <script>
-  // ─── CONFIG FROM URL PARAMS ───────────────────────────────────────────────
-  const p = new URLSearchParams(window.location.search);
-  const CONFIG = {
-    chart:          p.get('chart')          || 'donut',
-    worksheet:      p.get('worksheet')      || '',
-    brandField:     p.get('brandField')     || 'Brand Name Upper',
-    valueField:     p.get('valueField')     || 'Raw Value',
-    periodField:    p.get('periodField')    || 'Quarter',
-    indicatorField: p.get('indicatorField') || 'indicator_name',
-    indicatorValue: p.get('indicatorValue') || '',
-    parameter:      p.get('parameter')      || 'Select Brand',
-    selectedColor:  p.get('selectedColor')  || '#E8527A',
-    neutralColor:   p.get('neutralColor')   || '#5a5a5a',
-    bgColor:        p.get('bgColor')        || 'transparent',
+  // ─── DEFAULT CONFIG ───────────────────────────────────────────────────────
+  const DEFAULTS = {
+    chart:         'donut',
+    worksheet:     '',
+    brandField:    'Brand Name Upper',
+    valueField:    'Raw Value',
+    periodField:   'Quarter',
+    parameter:     'Select Brand',
+    selectedColor: '#E8527A',
+    neutralColor:  '#5a5a5a',
+    bgColor:       '#2a2a2a',
   };
 
   // ─── STATE ────────────────────────────────────────────────────────────────
   let _dashboard    = null;
   let _lastData     = null;
   let _lastSelected = null;
+  let CONFIG        = { ...DEFAULTS };
 
   // ─── SAMPLE DATA ─────────────────────────────────────────────────────────
   function getSampleData(chart) {
@@ -77,7 +180,123 @@
     ];
   }
 
-  // ─── LOAD TABLEAU API DYNAMICALLY ────────────────────────────────────────
+  // ─── SETTINGS DIALOG ─────────────────────────────────────────────────────
+  function showSettings(worksheets) {
+    const existing = document.getElementById('settings-overlay');
+    if (existing) existing.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'settings-overlay';
+
+    const worksheetOptions = worksheets
+      ? worksheets.map(ws => `<option value="${ws}" ${ws === CONFIG.worksheet ? 'selected' : ''}>${ws}</option>`).join('')
+      : `<option value="${CONFIG.worksheet}">${CONFIG.worksheet || 'No worksheets found'}</option>`;
+
+    overlay.innerHTML = `
+      <div id="settings-dialog">
+        <h2>⚙ Chart Settings</h2>
+
+        <div class="field">
+          <label>Chart Type</label>
+          <select id="s-chart">
+            <option value="donut"  ${CONFIG.chart==='donut' ?'selected':''}>Donut</option>
+            <option value="bar"    ${CONFIG.chart==='bar'   ?'selected':''}>Bar</option>
+            <option value="line"   ${CONFIG.chart==='line'  ?'selected':''}>Line</option>
+            <option value="ban"    ${CONFIG.chart==='ban'   ?'selected':''}>BAN (Headline Number)</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>Worksheet</label>
+          <select id="s-worksheet">${worksheetOptions}</select>
+          <div class="hint">Worksheet that contains your brand data</div>
+        </div>
+
+        <div class="field">
+          <label>Brand Field</label>
+          <input id="s-brandField" type="text" value="${CONFIG.brandField}">
+        </div>
+
+        <div class="field">
+          <label>Value Field</label>
+          <input id="s-valueField" type="text" value="${CONFIG.valueField}">
+        </div>
+
+        <div class="field">
+          <label>Period Field <span style="color:#666">(line chart only)</span></label>
+          <input id="s-periodField" type="text" value="${CONFIG.periodField}">
+        </div>
+
+        <div class="field">
+          <label>Select Brand Parameter</label>
+          <input id="s-parameter" type="text" value="${CONFIG.parameter}">
+        </div>
+
+        <div class="field">
+          <label>Background Colour</label>
+          <input id="s-bgColor" type="color" value="${CONFIG.bgColor}" style="height:36px;padding:2px;">
+          <div class="hint">Match your dashboard background</div>
+        </div>
+
+        <div class="field">
+          <label>Highlight Colour</label>
+          <input id="s-selectedColor" type="color" value="${CONFIG.selectedColor}" style="height:36px;padding:2px;">
+        </div>
+
+        <div class="settings-footer">
+          <button class="btn btn-secondary" id="s-cancel">Cancel</button>
+          <button class="btn btn-primary" id="s-save">Save & Render</button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    document.getElementById('s-cancel').onclick = () => overlay.remove();
+    document.getElementById('s-save').onclick = async () => {
+      CONFIG.chart         = document.getElementById('s-chart').value;
+      CONFIG.worksheet     = document.getElementById('s-worksheet').value;
+      CONFIG.brandField    = document.getElementById('s-brandField').value;
+      CONFIG.valueField    = document.getElementById('s-valueField').value;
+      CONFIG.periodField   = document.getElementById('s-periodField').value;
+      CONFIG.parameter     = document.getElementById('s-parameter').value;
+      CONFIG.bgColor       = document.getElementById('s-bgColor').value;
+      CONFIG.selectedColor = document.getElementById('s-selectedColor').value;
+
+      // Save to Tableau settings if available
+      if (_dashboard) {
+        try {
+          const settings = tableau.extensions.settings;
+          Object.entries(CONFIG).forEach(([k, v]) => settings.set(k, v));
+          await settings.saveAsync();
+        } catch(e) { /* outside Tableau */ }
+      }
+
+      applyBackground();
+      overlay.remove();
+
+      if (_dashboard) {
+        const worksheet = _dashboard.worksheets.find(ws => ws.name === CONFIG.worksheet);
+        if (worksheet) await fetchAndRender(worksheet, _dashboard);
+      } else {
+        renderChart(getSampleData(CONFIG.chart), 'Illy Coffee', null);
+      }
+    };
+  }
+
+  document.getElementById('configure-btn').onclick = () => {
+    const worksheets = _dashboard
+      ? _dashboard.worksheets.map(ws => ws.name)
+      : null;
+    showSettings(worksheets);
+  };
+
+  function applyBackground() {
+    document.body.style.background = CONFIG.bgColor;
+    document.documentElement.style.background = CONFIG.bgColor;
+  }
+
+  // ─── LOAD TABLEAU API ─────────────────────────────────────────────────────
   function loadTableauAPI() {
     return new Promise((resolve) => {
       const script = document.createElement('script');
@@ -89,32 +308,55 @@
     });
   }
 
-  // ─── FALLBACK TIMEOUT ────────────────────────────────────────────────────
+  // ─── FALLBACK ─────────────────────────────────────────────────────────────
   setTimeout(() => {
     const el = document.getElementById('chart');
     if (el.innerHTML.includes('Loading')) {
-      renderChart(getSampleData(CONFIG.chart), 'Illy Coffee', null);
+      applyBackground();
+      showSettings(null);
     }
   }, 3000);
 
   // ─── TABLEAU INIT ─────────────────────────────────────────────────────────
   loadTableauAPI().then(() => {
     if (typeof tableau === 'undefined') {
-      renderChart(getSampleData(CONFIG.chart), 'Illy Coffee', null);
+      applyBackground();
+      showSettings(null);
       return;
     }
 
-    tableau.extensions.initializeAsync().then(async () => {
+    tableau.extensions.initializeAsync({ configure: () => {
+      const worksheets = _dashboard ? _dashboard.worksheets.map(ws => ws.name) : null;
+      showSettings(worksheets);
+    }}).then(async () => {
       _dashboard = tableau.extensions.dashboardContent.dashboard;
+
+      // Load saved settings
+      const settings = tableau.extensions.settings;
+      Object.keys(DEFAULTS).forEach(k => {
+        const val = settings.get(k);
+        if (val) CONFIG[k] = val;
+      });
+
+      applyBackground();
+
+      // If no worksheet configured yet, show settings
+      if (!CONFIG.worksheet) {
+        const worksheets = _dashboard.worksheets.map(ws => ws.name);
+        showSettings(worksheets);
+        return;
+      }
 
       const worksheet = _dashboard.worksheets.find(ws => ws.name === CONFIG.worksheet);
       if (!worksheet) {
-        showError(`Worksheet "${CONFIG.worksheet}" not found.`);
+        const worksheets = _dashboard.worksheets.map(ws => ws.name);
+        showSettings(worksheets);
         return;
       }
 
       await fetchAndRender(worksheet, _dashboard);
 
+      // Listen for parameter changes
       const allParams = await _dashboard.getParametersAsync();
       const param = allParams.find(p => p.name === CONFIG.parameter);
       if (param) {
@@ -123,12 +365,14 @@
         });
       }
 
+      // Listen for filter changes
       worksheet.addEventListener(tableau.TableauEventType.FilterChanged, () => {
         fetchAndRender(worksheet, _dashboard);
       });
 
     }).catch(() => {
-      renderChart(getSampleData(CONFIG.chart), 'Illy Coffee', null);
+      applyBackground();
+      showSettings(null);
     });
   });
 
@@ -182,7 +426,7 @@
       case 'bar':   renderBar(el, data, selectedBrand, dashboard);   break;
       case 'line':  renderLine(el, data, selectedBrand, dashboard);  break;
       case 'ban':   renderBAN(el, data, selectedBrand);              break;
-      default: showError(`Unknown chart type: "${CONFIG.chart}". Use donut, bar, line, or ban.`);
+      default: showError(`Unknown chart type: "${CONFIG.chart}"`);
     }
   }
 
@@ -229,12 +473,10 @@
     const arcHover = d3.arc().innerRadius(inner).outerRadius(R+7).padAngle(0.028).cornerRadius(2);
     const pie      = d3.pie().value(d => d.value).sort(null);
 
-    const holeColor = CONFIG.bgColor === 'transparent' ? '#2a2a2a' : CONFIG.bgColor;
-
     g.selectAll('path').data(pie(data)).join('path')
       .attr('d', arc)
       .attr('fill',         d => d.data.name === selectedBrand ? CONFIG.selectedColor : CONFIG.neutralColor)
-      .attr('stroke',       holeColor)
+      .attr('stroke',       CONFIG.bgColor)
       .attr('stroke-width', 2)
       .style('cursor',      'pointer')
       .on('mouseover', function() { d3.select(this).attr('d', arcHover); })
@@ -244,7 +486,7 @@
         renderChart(data, d.data.name, dashboard);
       });
 
-    g.append('circle').attr('r', inner - 2).attr('fill', holeColor);
+    g.append('circle').attr('r', inner - 2).attr('fill', CONFIG.bgColor);
 
     const legend = document.createElement('div');
     legend.style.cssText = 'display:flex;flex-direction:column;gap:7px;';
