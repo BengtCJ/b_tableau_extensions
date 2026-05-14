@@ -577,9 +577,9 @@
     if (!dashboard) return;
     const criteria = [{ fieldName: CONFIG.brandField, value: name }];
     await Promise.allSettled(
-      dashboard.worksheets.map(ws =>
-        ws.selectMarksByValueAsync(criteria, tableau.SelectionUpdateType.Replace)
-      )
+      dashboard.worksheets
+        .filter(ws => ws.name !== CONFIG.worksheet)
+        .map(ws => ws.selectMarksByValueAsync(criteria, tableau.SelectionUpdateType.Replace))
     );
   }
 
