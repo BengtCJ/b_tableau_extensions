@@ -538,7 +538,9 @@
       const allParams = await dashboard.getParametersAsync();
       const param = allParams.find(p => p.name === CONFIG.parameter);
       if (param) {
-        selectedBrand = param.currentValue.formattedValue || param.currentValue.value;
+        const raw = param.currentValue.formattedValue || param.currentValue.value;
+        const match = data.find(d => d.name.toLowerCase() === raw.toLowerCase());
+        selectedBrand = match ? match.name : raw;
       } else {
         console.warn('Parameter "' + CONFIG.parameter + '" not found. Available params:', allParams.map(p => p.name).join(', '));
       }
