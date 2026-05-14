@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>BP Chart Extensions</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+  <script src="tableau.extensions.js" onerror="console.warn('tableau.extensions.js not found')"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -445,23 +446,7 @@
 
   // ─── LOAD TABLEAU API ─────────────────────────────────────────────────────
   function loadTableauAPI() {
-    const urls = [
-      'tableau.extensions.js',
-      'https://extensions.tableausoftware.com/lib/tableau.extensions.1.latest.js',
-      'https://raw.githubusercontent.com/tableau/extensions-api/main/lib/tableau.extensions.1.latest.js',
-    ];
-    function tryLoad(i) {
-      return new Promise((resolve) => {
-        if (typeof tableau !== 'undefined') { resolve(); return; }
-        if (i >= urls.length) { resolve(); return; }
-        const script = document.createElement('script');
-        script.src = urls[i];
-        script.onload = resolve;
-        script.onerror = () => tryLoad(i + 1).then(resolve);
-        document.head.appendChild(script);
-      });
-    }
-    return tryLoad(0);
+    return Promise.resolve();
   }
 
   // ─── APPLY BACKGROUND IMMEDIATELY ────────────────────────────────────────
