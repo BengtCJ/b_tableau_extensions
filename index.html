@@ -66,6 +66,16 @@
       font-weight: 400;
       letter-spacing: 0.06em;
       font-family: 'Tableau Light', Georgia, serif;
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+    }
+
+    #settings-dialog h2 .version {
+      font-size: 10px;
+      color: #666;
+      letter-spacing: 0.04em;
+      font-style: normal;
     }
 
     .fields-grid {
@@ -192,6 +202,9 @@
   <button id="configure-btn" title="Configure chart">⚙</button>
 
   <script>
+  // ─── VERSION ──────────────────────────────────────────────────────────────
+  const VERSION = '2026-05-14.1';
+
   // ─── FONTS ────────────────────────────────────────────────────────────────
   const FONT_TITLE = "'Baskerville', Georgia, serif";
   const FONT_BODY  = "'Tableau Regular', Georgia, serif";
@@ -316,7 +329,7 @@
 
     overlay.innerHTML = `
       <div id="settings-dialog">
-        <h2>⚙ Chart Settings</h2>
+        <h2>⚙ Chart Settings <span class="version">v${VERSION}</span></h2>
         <datalist id="s-columns">${colOptions}</datalist>
         <div class="fields-grid">
 
