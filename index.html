@@ -246,10 +246,11 @@
   };
 
   // ─── STATE ────────────────────────────────────────────────────────────────
-  let _dashboard    = null;
-  let _lastData     = null;
-  let _lastSelected = null;
-  let CONFIG        = { ...DEFAULTS };
+  let _dashboard     = null;
+  let _lastData      = null;
+  let _lastSelected  = null;
+  let _suppressUntil = 0;
+  let CONFIG         = { ...DEFAULTS };
 
   // ─── APPLY BACKGROUND ─────────────────────────────────────────────────────
   function applyBackground() {
@@ -511,6 +512,7 @@
 
   // ─── DATA FETCHING ────────────────────────────────────────────────────────
   async function fetchAndRender(worksheet, dashboard) {
+    if (Date.now() < _suppressUntil) return;
     try {
       const dataTable = await worksheet.getSummaryDataAsync();
       const cols = dataTable.columns;
@@ -571,6 +573,7 @@
     if (!dashboard) return;
     const worksheet = dashboard.worksheets.find(ws => ws.name === CONFIG.worksheet);
     if (!worksheet) return;
+    _suppressUntil = Date.now() + 1000;
     try {
       await worksheet.selectMarksByValueAsync(
         [{ fieldName: CONFIG.brandField, value: name }],
