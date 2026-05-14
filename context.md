@@ -16,6 +16,9 @@ Single file: `index.html` hosted on GitHub Pages.
 - Brand names always Tableau Light + uppercase throughout
 - Background: transparent by default (works on Cloud), colour picker for Desktop
 
+## Deferred / To Do
+- **Font: Baskerville vs Baskervville** — code uses `'Baskerville'` (macOS system font, falls back to Georgia on Windows). Should switch to `'Baskervville'` (Google Fonts, double-v) + add `<link>` import so it renders correctly on Tableau Cloud/Windows. Two places: CSS line ~68 and JS constant `FONT_TITLE` line ~197.
+
 ## Known Issues / In Progress
 - Settings persistence on Cloud needs verification after allowlisting with full data access
 - Desktop background shows white when transparent set — workaround: set bgColor in settings to match dashboard
