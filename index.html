@@ -11,7 +11,6 @@
     html, body {
       width: 100%;
       height: 100%;
-      background: transparent !important;
       font-family: 'Tableau Regular', Georgia, serif;
       overflow: hidden;
     }
@@ -21,7 +20,6 @@
       height: 100%;
       min-height: 300px;
       display: block;
-      background: transparent !important;
     }
 
     .error {
@@ -115,6 +113,26 @@
       border: 1px solid #555;
       border-radius: 4px;
       cursor: pointer;
+    }
+
+    .transparent-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 5px;
+    }
+
+    .transparent-row input[type="checkbox"] {
+      accent-color: #e994a2;
+      width: 13px;
+      height: 13px;
+      cursor: pointer;
+    }
+
+    .transparent-row span {
+      font-size: 10px;
+      color: #666;
+      font-family: 'Tableau Light', Georgia, serif;
     }
 
     .field .hint {
@@ -232,6 +250,12 @@
   let _lastSelected = null;
   let CONFIG        = { ...DEFAULTS };
 
+  // ─── APPLY BACKGROUND ─────────────────────────────────────────────────────
+  function applyBackground() {
+    document.body.style.background = CONFIG.bgColor;
+    document.documentElement.style.background = CONFIG.bgColor;
+  }
+
   // ─── SAMPLE DATA ─────────────────────────────────────────────────────────
   function getSampleData(chart) {
     if (chart === 'line') {
@@ -266,6 +290,9 @@
 
     const overlay = document.createElement('div');
     overlay.id = 'settings-overlay';
+
+    const isTransparent = CONFIG.bgColor === 'transparent';
+    const bgColorValue  = isTransparent ? '#333333' : CONFIG.bgColor;
 
     const worksheetOptions = worksheets
       ? worksheets.map(ws => `<option value="${ws}" ${ws === CONFIG.worksheet ? 'selected' : ''}>${ws}</option>`).join('')
@@ -324,6 +351,15 @@
             <div class="hint">Non-selected brand colour</div>
           </div>
 
+          <div class="field field-full">
+            <label>Background Colour</label>
+            <input id="s-bgColor" type="color" value="${bgColorValue}" ${isTransparent ? 'disabled' : ''} style="${isTransparent ? 'opacity:0.4' : ''}">
+            <div class="transparent-row">
+              <input type="checkbox" id="s-transparent" ${isTransparent ? 'checked' : ''}>
+              <span>Use transparent — recommended for Tableau Cloud</span>
+            </div>
+          </div>
+
         </div>
         <div class="settings-footer">
           <button class="btn btn-secondary" id="s-cancel">Cancel</button>
@@ -334,7 +370,16 @@
 
     document.body.appendChild(overlay);
 
+    // Toggle colour picker when checkbox changes
+    const checkbox = document.getElementById('s-transparent');
+    const bgInput  = document.getElementById('s-bgColor');
+    checkbox.addEventListener('change', () => {
+      bgInput.disabled = checkbox.checked;
+      bgInput.style.opacity = checkbox.checked ? '0.4' : '1';
+    });
+
     document.getElementById('s-cancel').onclick = () => overlay.remove();
+
     document.getElementById('s-save').onclick = async () => {
       CONFIG.chart         = document.getElementById('s-chart').value;
       CONFIG.worksheet     = document.getElementById('s-worksheet').value;
@@ -344,6 +389,9 @@
       CONFIG.parameter     = document.getElementById('s-parameter').value;
       CONFIG.selectedColor = document.getElementById('s-selectedColor').value;
       CONFIG.neutralColor  = document.getElementById('s-neutralColor').value;
+      CONFIG.bgColor       = document.getElementById('s-transparent').checked
+                             ? 'transparent'
+                             : document.getElementById('s-bgColor').value;
 
       if (_dashboard) {
         try {
@@ -356,6 +404,7 @@
         }
       }
 
+      applyBackground();
       overlay.remove();
 
       if (_dashboard) {
@@ -383,6 +432,9 @@
       setTimeout(resolve, 2000);
     });
   }
+
+  // ─── APPLY BACKGROUND IMMEDIATELY ────────────────────────────────────────
+  applyBackground();
 
   // ─── FALLBACK ─────────────────────────────────────────────────────────────
   setTimeout(() => {
@@ -413,6 +465,8 @@
 
       console.log('Loaded CONFIG:', JSON.stringify(CONFIG));
       console.log('All settings:', JSON.stringify(settings.getAll()));
+
+      applyBackground();
 
       if (!CONFIG.worksheet) {
         const worksheets = _dashboard.worksheets.map(ws => ws.name);
@@ -523,7 +577,6 @@
     el.style.gap            = '20px';
     el.style.padding        = '12px';
 
-    // BAN panel
     const ban = document.createElement('div');
     ban.style.cssText = 'display:flex;flex-direction:column;gap:6px;min-width:110px;';
     const sel = data.find(d => d.name === selectedBrand) || data[0];
@@ -537,14 +590,12 @@
       </div>
       <div style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;
         color:${D.banLabel.color};
-        font-family:${D.banLabel.font};
-        font-style:${D.banLabel.style};">
+        font-family:${D.banLabel.font};">
         ${sel ? sel.name : ''}
       </div>
     `;
     el.appendChild(ban);
 
-    // SVG donut
     const svgEl = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     svgEl.setAttribute('width',  R * 2 + 24);
     svgEl.setAttribute('height', R * 2 + 24);
@@ -558,14 +609,14 @@
     const arcHover = d3.arc().innerRadius(inner).outerRadius(R+7).padAngle(0.028).cornerRadius(2);
     const pie      = d3.pie().value(d => d.value).sort(null);
 
-    // Use transparent fill for donut hole
-    const holeColor = CONFIG.bgColor === 'transparent' ? 'transparent' : CONFIG.bgColor;
+    const isTransparent = CONFIG.bgColor === 'transparent';
+    const holeColor     = isTransparent ? 'transparent' : CONFIG.bgColor;
 
     g.selectAll('path').data(pie(data)).join('path')
       .attr('d', arc)
       .attr('fill',         d => d.data.name === selectedBrand ? CONFIG.selectedColor : CONFIG.neutralColor)
       .attr('stroke',       holeColor)
-      .attr('stroke-width', 2)
+      .attr('stroke-width', isTransparent ? 0 : 2)
       .style('cursor',      'pointer')
       .on('mouseover', function() { d3.select(this).attr('d', arcHover); })
       .on('mouseout',  function() { d3.select(this).attr('d', arc); })
@@ -577,22 +628,18 @@
     g.append('circle')
       .attr('r', inner - 2)
       .attr('fill', holeColor)
-      .attr('fill-opacity', CONFIG.bgColor === 'transparent' ? 0 : 1);
+      .attr('fill-opacity', isTransparent ? 0 : 1);
 
-    // Legend
     const legend = document.createElement('div');
     legend.style.cssText = 'display:flex;flex-direction:column;gap:7px;';
     data.forEach(d => {
-      const isSelected = d.name === selectedBrand;
-      const labelStyle = isSelected ? D.legendSelected : D.legendLabel;
+      const isSelected  = d.name === selectedBrand;
+      const labelStyle  = isSelected ? D.legendSelected : D.legendLabel;
       const item = document.createElement('div');
       item.style.cssText = `
         display:flex;align-items:center;gap:7px;cursor:pointer;
-        font-size:11px;
-        text-transform:uppercase;
-        letter-spacing:0.06em;
-        color:${labelStyle.color};
-        font-family:${labelStyle.font};`;
+        font-size:11px;text-transform:uppercase;letter-spacing:0.06em;
+        color:${labelStyle.color};font-family:${labelStyle.font};`;
       item.innerHTML = `
         <span style="width:8px;height:8px;border-radius:50%;flex-shrink:0;
           background:${isSelected ? CONFIG.selectedColor : CONFIG.neutralColor};"></span>
@@ -638,7 +685,6 @@
         renderChart(data, d.name, dashboard);
       });
 
-    // Value labels
     g.selectAll('.vl').data(sorted).join('text')
       .attr('class', 'vl')
       .attr('x', d => x(d.name) + x.bandwidth() / 2)
@@ -649,15 +695,14 @@
       .style('font-family', d => d.name === selectedBrand ? D.valueLabelSel.font : D.valueLabel.font)
       .text(d => d.value.toFixed(1));
 
-    // X axis brand name labels
     g.append('g').attr('transform', `translate(0,${h})`).call(d3.axisBottom(x).tickSize(0))
       .call(g => g.select('.domain').remove())
       .selectAll('text')
-      .style('fill',             d => d === selectedBrand ? D.axisLabelSel.color : D.axisLabel.color)
-      .style('font-size',        '10px')
-      .style('font-family',      d => d === selectedBrand ? D.axisLabelSel.font : D.axisLabel.font)
-      .style('text-transform',   'uppercase')
-      .style('letter-spacing',   '0.06em')
+      .style('fill',           d => d === selectedBrand ? D.axisLabelSel.color : D.axisLabel.color)
+      .style('font-size',      '10px')
+      .style('font-family',    d => d === selectedBrand ? D.axisLabelSel.font : D.axisLabel.font)
+      .style('text-transform', 'uppercase')
+      .style('letter-spacing', '0.06em')
       .attr('dy', '1.4em');
   }
 
@@ -709,7 +754,6 @@
         .attr('r', 3.5).attr('fill', CONFIG.selectedColor);
     }
 
-    // X axis
     g.append('g').attr('transform', `translate(0,${h})`)
       .call(d3.axisBottom(x).tickSize(3))
       .call(g => g.select('.domain').attr('stroke', D.gridColor))
@@ -720,7 +764,6 @@
       .style('text-transform', 'uppercase')
       .style('letter-spacing', '0.06em');
 
-    // Y axis
     g.append('g')
       .call(d3.axisLeft(y).ticks(4).tickSize(-w))
       .call(g => g.select('.domain').remove())
@@ -746,15 +789,11 @@
 
     el.innerHTML = `
       <div style="font-size:${fontSize}px;font-weight:400;line-height:1;
-        color:${D.value.color};
-        font-family:${D.value.font};
-        font-style:${D.value.style};">
+        color:${D.value.color};font-family:${D.value.font};font-style:${D.value.style};">
         ${sel ? sel.value.toFixed(1) : '--'}
       </div>
       <div style="font-size:12px;letter-spacing:0.1em;text-transform:uppercase;
-        color:${D.label.color};
-        font-family:${D.label.font};
-        font-style:${D.label.style};">
+        color:${D.label.color};font-family:${D.label.font};">
         ${sel ? sel.name : ''}
       </div>
     `;
