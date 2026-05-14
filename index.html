@@ -12,7 +12,7 @@
       width: 100%;
       height: 100%;
       background: #333333;
-      font-family: 'Tableau Regular', 'Tableau Light', 'Baskerville', Georgia, serif;
+      font-family: 'Tableau Regular', Georgia, serif;
       overflow: hidden;
     }
 
@@ -91,8 +91,8 @@
     .field select,
     .field input[type="text"] {
       width: 100%;
-      background: #2a2a2a;
-      border: 1px solid #444;
+      background: #333333;
+      border: 1px solid #555;
       border-radius: 4px;
       color: #e6e6e6;
       padding: 4px 8px;
@@ -110,8 +110,8 @@
       width: 100%;
       height: 30px;
       padding: 2px;
-      background: #2a2a2a;
-      border: 1px solid #444;
+      background: #333333;
+      border: 1px solid #555;
       border-radius: 4px;
       cursor: pointer;
     }
@@ -142,7 +142,7 @@
 
     .btn-primary { background: #e994a2; color: #222; }
     .btn-primary:hover { background: #d4778a; }
-    .btn-secondary { background: #333; color: #e6e6e6; border: 1px solid #444; }
+    .btn-secondary { background: #333333; color: #e6e6e6; border: 1px solid #555; }
     .btn-secondary:hover { background: #3a3a3a; }
 
     /* ── Configure gear button ── */
@@ -174,14 +174,43 @@
 
   <script>
   // ─── FONTS ────────────────────────────────────────────────────────────────
-  const FONT_TITLE  = "'Baskerville', Georgia, serif";          // italic headings
-  const FONT_BODY   = "'Tableau Regular', Georgia, serif";      // body text
-  const FONT_LIGHT  = "'Tableau Light', Georgia, serif";        // light/secondary text
+  const FONT_TITLE = "'Baskerville', Georgia, serif";
+  const FONT_BODY  = "'Tableau Regular', Georgia, serif";
+  const FONT_LIGHT = "'Tableau Light', Georgia, serif";
 
-  // ─── COLOURS ──────────────────────────────────────────────────────────────
+  // ─── BASE COLOURS ─────────────────────────────────────────────────────────
   const COL_WHITE      = '#ffffff';
   const COL_LIGHT_GREY = '#e6e6e6';
   const COL_DARK_GREY  = '#666666';
+  const COL_GRID       = '#444444';
+
+  // ─── DESIGN SYSTEM (resolved after CONFIG loads) ──────────────────────────
+  function buildDesign() {
+    return {
+      donut: {
+        banValue:      { font: FONT_TITLE, style: 'italic', color: CONFIG.selectedColor },
+        banLabel:      { font: FONT_LIGHT, style: 'normal', color: COL_LIGHT_GREY },
+        legendLabel:   { font: FONT_BODY,  style: 'normal', color: COL_DARK_GREY },
+        legendValue:   { font: FONT_LIGHT, style: 'normal', color: COL_LIGHT_GREY },
+        legendSelected:{ font: FONT_BODY,  style: 'normal', color: CONFIG.selectedColor },
+      },
+      bar: {
+        valueLabel:    { font: FONT_LIGHT, style: 'normal', color: COL_LIGHT_GREY },
+        valueLabelSel: { font: FONT_BODY,  style: 'normal', color: CONFIG.selectedColor },
+        axisLabel:     { font: FONT_BODY,  style: 'normal', color: COL_DARK_GREY },
+        axisLabelSel:  { font: FONT_BODY,  style: 'normal', color: CONFIG.selectedColor },
+      },
+      line: {
+        axisX:         { font: FONT_LIGHT, style: 'normal', color: COL_DARK_GREY },
+        axisY:         { font: FONT_LIGHT, style: 'normal', color: COL_DARK_GREY },
+        gridColor:     COL_GRID,
+      },
+      ban: {
+        value:         { font: FONT_TITLE, style: 'italic', color: CONFIG.selectedColor },
+        label:         { font: FONT_LIGHT, style: 'normal', color: COL_LIGHT_GREY },
+      },
+    };
+  }
 
   // ─── DEFAULT CONFIG ───────────────────────────────────────────────────────
   const DEFAULTS = {
@@ -472,11 +501,13 @@
     el.innerHTML = '';
     el.removeAttribute('style');
 
+    const D = buildDesign();
+
     switch (CONFIG.chart) {
-      case 'donut': renderDonut(el, data, selectedBrand, dashboard); break;
-      case 'bar':   renderBar(el, data, selectedBrand, dashboard);   break;
-      case 'line':  renderLine(el, data, selectedBrand, dashboard);  break;
-      case 'ban':   renderBAN(el, data, selectedBrand);              break;
+      case 'donut': renderDonut(el, data, selectedBrand, dashboard, D.donut); break;
+      case 'bar':   renderBar(el, data, selectedBrand, dashboard, D.bar);     break;
+      case 'line':  renderLine(el, data, selectedBrand, dashboard, D.line);   break;
+      case 'ban':   renderBAN(el, data, selectedBrand, D.ban);                break;
       default: showError(`Unknown chart type: "${CONFIG.chart}"`);
     }
   }
@@ -490,7 +521,7 @@
   }
 
   // ─── CHART: DONUT ─────────────────────────────────────────────────────────
-  function renderDonut(el, data, selectedBrand, dashboard) {
+  function renderDonut(el, data, selectedBrand, dashboard, D) {
     const W = el.offsetWidth  || window.innerWidth  || 480;
     const H = el.offsetHeight || window.innerHeight || 300;
     const R = Math.min(H * 0.44, W * 0.28);
@@ -502,15 +533,28 @@
     el.style.gap            = '20px';
     el.style.padding        = '12px';
 
+    // BAN panel
     const ban = document.createElement('div');
     ban.style.cssText = 'display:flex;flex-direction:column;gap:6px;min-width:110px;';
     const sel = data.find(d => d.name === selectedBrand) || data[0];
     ban.innerHTML = `
-      <div style="font-size:${Math.max(36, R*0.5)}px;font-weight:400;line-height:1;color:${CONFIG.selectedColor};font-family:${FONT_TITLE};font-style:italic;">${sel ? sel.value.toFixed(1) : '--'}</div>
-      <div style="font-size:11px;color:${COL_LIGHT_GREY};letter-spacing:0.08em;text-transform:uppercase;font-family:${FONT_LIGHT};">${sel ? sel.name : ''}</div>
+      <div style="font-size:${Math.max(36, R*0.5)}px;line-height:1;
+        color:${D.banValue.color};
+        font-family:${D.banValue.font};
+        font-style:${D.banValue.style};
+        font-weight:400;">
+        ${sel ? sel.value.toFixed(1) : '--'}
+      </div>
+      <div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;
+        color:${D.banLabel.color};
+        font-family:${D.banLabel.font};
+        font-style:${D.banLabel.style};">
+        ${sel ? sel.name : ''}
+      </div>
     `;
     el.appendChild(ban);
 
+    // SVG donut
     const svgEl = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     svgEl.setAttribute('width',  R * 2 + 24);
     svgEl.setAttribute('height', R * 2 + 24);
@@ -539,16 +583,24 @@
 
     g.append('circle').attr('r', inner - 2).attr('fill', CONFIG.bgColor);
 
+    // Legend
     const legend = document.createElement('div');
     legend.style.cssText = 'display:flex;flex-direction:column;gap:7px;';
     data.forEach(d => {
       const isSelected = d.name === selectedBrand;
+      const labelStyle = isSelected ? D.legendSelected : D.legendLabel;
       const item = document.createElement('div');
-      item.style.cssText = `display:flex;align-items:center;gap:7px;font-size:11px;color:${isSelected ? CONFIG.selectedColor : COL_DARK_GREY};cursor:pointer;font-family:${FONT_BODY};`;
+      item.style.cssText = `display:flex;align-items:center;gap:7px;cursor:pointer;
+        font-size:11px;
+        color:${labelStyle.color};
+        font-family:${labelStyle.font};`;
       item.innerHTML = `
-        <span style="width:8px;height:8px;border-radius:50%;flex-shrink:0;background:${isSelected ? CONFIG.selectedColor : CONFIG.neutralColor};"></span>
+        <span style="width:8px;height:8px;border-radius:50%;flex-shrink:0;
+          background:${isSelected ? CONFIG.selectedColor : CONFIG.neutralColor};"></span>
         <span style="flex:1;">${d.name}</span>
-        <span style="color:${isSelected ? CONFIG.selectedColor : COL_LIGHT_GREY};">${d.value.toFixed(1)}</span>
+        <span style="color:${D.legendValue.color};font-family:${D.legendValue.font};">
+          ${d.value.toFixed(1)}
+        </span>
       `;
       item.onclick = async () => {
         await selectBrand(d.name, dashboard);
@@ -560,7 +612,7 @@
   }
 
   // ─── CHART: BAR ───────────────────────────────────────────────────────────
-  function renderBar(el, data, selectedBrand, dashboard) {
+  function renderBar(el, data, selectedBrand, dashboard, D) {
     const W = el.offsetWidth  || window.innerWidth  || 500;
     const H = el.offsetHeight || window.innerHeight || 300;
     const m = { top: 24, right: 16, bottom: 48, left: 16 };
@@ -587,34 +639,36 @@
         renderChart(data, d.name, dashboard);
       });
 
+    // Value labels
     g.selectAll('.vl').data(sorted).join('text')
       .attr('class', 'vl')
       .attr('x', d => x(d.name) + x.bandwidth() / 2)
       .attr('y', d => y(d.value) - 5)
       .attr('text-anchor', 'middle')
-      .style('fill',        d => d.name === selectedBrand ? CONFIG.selectedColor : COL_LIGHT_GREY)
+      .style('fill',        d => d.name === selectedBrand ? D.valueLabelSel.color : D.valueLabel.color)
       .style('font-size',   '11px')
-      .style('font-family', FONT_BODY)
+      .style('font-family', d => d.name === selectedBrand ? D.valueLabelSel.font : D.valueLabel.font)
       .text(d => d.value.toFixed(1));
 
+    // X axis labels
     g.append('g').attr('transform', `translate(0,${h})`).call(d3.axisBottom(x).tickSize(0))
       .call(g => g.select('.domain').remove())
       .selectAll('text')
-      .style('fill',        d => d === selectedBrand ? CONFIG.selectedColor : COL_DARK_GREY)
+      .style('fill',        d => d === selectedBrand ? D.axisLabelSel.color : D.axisLabel.color)
       .style('font-size',   '11px')
-      .style('font-family', FONT_BODY)
+      .style('font-family', d => d === selectedBrand ? D.axisLabelSel.font : D.axisLabel.font)
       .attr('dy', '1.4em');
   }
 
   // ─── CHART: LINE ──────────────────────────────────────────────────────────
-  function renderLine(el, data, selectedBrand, dashboard) {
+  function renderLine(el, data, selectedBrand, dashboard, D) {
     const W = el.offsetWidth  || window.innerWidth  || 500;
     const H = el.offsetHeight || window.innerHeight || 300;
     const m = { top: 20, right: 24, bottom: 40, left: 40 };
     const w = W - m.left - m.right;
     const h = H - m.top  - m.bottom;
 
-    if (!data[0]?.period) { renderBar(el, data, selectedBrand, dashboard); return; }
+    if (!data[0]?.period) { renderBar(el, data, selectedBrand, dashboard, buildDesign().bar); return; }
 
     const brands  = [...new Set(data.map(d => d.name))];
     const periods = [...new Set(data.map(d => d.period))];
@@ -636,12 +690,14 @@
     const line = d3.line().defined(d => d.value !== null)
       .x(d => x(d.period)).y(d => y(d.value)).curve(d3.curveMonotoneX);
 
+    // Non-selected lines
     grouped.filter(b => b.name !== selectedBrand).forEach(brand => {
       g.append('path').datum(brand.values)
         .attr('fill', 'none').attr('stroke', CONFIG.neutralColor)
         .attr('stroke-width', 1).attr('opacity', 0.5).attr('d', line);
     });
 
+    // Selected line
     const selBrand = grouped.find(b => b.name === selectedBrand);
     if (selBrand) {
       g.append('path').datum(selBrand.values)
@@ -654,26 +710,28 @@
         .attr('r', 3.5).attr('fill', CONFIG.selectedColor);
     }
 
+    // X axis
     g.append('g').attr('transform', `translate(0,${h})`)
       .call(d3.axisBottom(x).tickSize(3))
-      .call(g => g.select('.domain').attr('stroke', COL_DARK_GREY))
+      .call(g => g.select('.domain').attr('stroke', D.gridColor))
       .selectAll('text')
-      .style('fill', COL_DARK_GREY)
-      .style('font-size', '11px')
-      .style('font-family', FONT_BODY);
+      .style('fill',        D.axisX.color)
+      .style('font-size',   '11px')
+      .style('font-family', D.axisX.font);
 
+    // Y axis
     g.append('g')
       .call(d3.axisLeft(y).ticks(4).tickSize(-w))
       .call(g => g.select('.domain').remove())
-      .call(g => g.selectAll('.tick line').attr('stroke', '#444').attr('stroke-dasharray', '3,3'))
+      .call(g => g.selectAll('.tick line').attr('stroke', D.gridColor).attr('stroke-dasharray', '3,3'))
       .selectAll('text')
-      .style('fill', COL_DARK_GREY)
-      .style('font-size', '11px')
-      .style('font-family', FONT_BODY);
+      .style('fill',        D.axisY.color)
+      .style('font-size',   '11px')
+      .style('font-family', D.axisY.font);
   }
 
   // ─── CHART: BAN ───────────────────────────────────────────────────────────
-  function renderBAN(el, data, selectedBrand) {
+  function renderBAN(el, data, selectedBrand, D) {
     const sel = data.find(d => d.name === selectedBrand) || data[0];
     const W = el.offsetWidth || window.innerWidth || 200;
     const fontSize = Math.min(Math.max(W * 0.22, 40), 96);
@@ -686,8 +744,18 @@
     el.style.gap            = '8px';
 
     el.innerHTML = `
-      <div style="font-size:${fontSize}px;font-weight:400;line-height:1;color:${CONFIG.selectedColor};font-family:${FONT_TITLE};font-style:italic;">${sel ? sel.value.toFixed(1) : '--'}</div>
-      <div style="font-size:12px;color:${COL_LIGHT_GREY};letter-spacing:0.1em;text-transform:uppercase;font-family:${FONT_LIGHT};">${sel ? sel.name : ''}</div>
+      <div style="font-size:${fontSize}px;font-weight:400;line-height:1;
+        color:${D.value.color};
+        font-family:${D.value.font};
+        font-style:${D.value.style};">
+        ${sel ? sel.value.toFixed(1) : '--'}
+      </div>
+      <div style="font-size:12px;letter-spacing:0.1em;text-transform:uppercase;
+        color:${D.label.color};
+        font-family:${D.label.font};
+        font-style:${D.label.style};">
+        ${sel ? sel.name : ''}
+      </div>
     `;
   }
 
