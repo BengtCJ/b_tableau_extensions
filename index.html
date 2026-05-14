@@ -11,7 +11,7 @@
     html, body {
       width: 100%;
       height: 100%;
-      background: #333333;
+      background: transparent !important;
       font-family: 'Tableau Regular', Georgia, serif;
       overflow: hidden;
     }
@@ -21,6 +21,7 @@
       height: 100%;
       min-height: 300px;
       display: block;
+      background: transparent !important;
     }
 
     .error {
@@ -184,30 +185,30 @@
   const COL_DARK_GREY  = '#666666';
   const COL_GRID       = '#444444';
 
-  // ─── DESIGN SYSTEM (resolved after CONFIG loads) ──────────────────────────
+  // ─── DESIGN SYSTEM ────────────────────────────────────────────────────────
   function buildDesign() {
     return {
       donut: {
         banValue:      { font: FONT_TITLE, style: 'italic', color: CONFIG.selectedColor },
         banLabel:      { font: FONT_LIGHT, style: 'normal', color: COL_LIGHT_GREY },
-        legendLabel:   { font: FONT_BODY,  style: 'normal', color: COL_DARK_GREY },
+        legendLabel:   { font: FONT_LIGHT, style: 'normal', color: COL_DARK_GREY },
         legendValue:   { font: FONT_LIGHT, style: 'normal', color: COL_LIGHT_GREY },
-        legendSelected:{ font: FONT_BODY,  style: 'normal', color: CONFIG.selectedColor },
+        legendSelected:{ font: FONT_LIGHT, style: 'normal', color: CONFIG.selectedColor },
       },
       bar: {
         valueLabel:    { font: FONT_LIGHT, style: 'normal', color: COL_LIGHT_GREY },
         valueLabelSel: { font: FONT_BODY,  style: 'normal', color: CONFIG.selectedColor },
-        axisLabel:     { font: FONT_BODY,  style: 'normal', color: COL_DARK_GREY },
-        axisLabelSel:  { font: FONT_BODY,  style: 'normal', color: CONFIG.selectedColor },
+        axisLabel:     { font: FONT_LIGHT, style: 'normal', color: COL_DARK_GREY },
+        axisLabelSel:  { font: FONT_LIGHT, style: 'normal', color: CONFIG.selectedColor },
       },
       line: {
-        axisX:         { font: FONT_LIGHT, style: 'normal', color: COL_DARK_GREY },
-        axisY:         { font: FONT_LIGHT, style: 'normal', color: COL_DARK_GREY },
-        gridColor:     COL_GRID,
+        axisX:     { font: FONT_LIGHT, style: 'normal', color: COL_DARK_GREY },
+        axisY:     { font: FONT_LIGHT, style: 'normal', color: COL_DARK_GREY },
+        gridColor: COL_GRID,
       },
       ban: {
-        value:         { font: FONT_TITLE, style: 'italic', color: CONFIG.selectedColor },
-        label:         { font: FONT_LIGHT, style: 'normal', color: COL_LIGHT_GREY },
+        value: { font: FONT_TITLE, style: 'italic', color: CONFIG.selectedColor },
+        label: { font: FONT_LIGHT, style: 'normal', color: COL_LIGHT_GREY },
       },
     };
   }
@@ -222,7 +223,7 @@
     parameter:     'Select Brand',
     selectedColor: '#e994a2',
     neutralColor:  '#7d7d7d',
-    bgColor:       '#333333',
+    bgColor:       'transparent',
   };
 
   // ─── STATE ────────────────────────────────────────────────────────────────
@@ -312,15 +313,15 @@
           </div>
 
           <div class="field">
-            <label>Background Colour</label>
-            <input id="s-bgColor" type="color" value="${CONFIG.bgColor}">
-            <div class="hint">Match dashboard background</div>
-          </div>
-
-          <div class="field">
             <label>Highlight Colour</label>
             <input id="s-selectedColor" type="color" value="${CONFIG.selectedColor}">
             <div class="hint">Selected brand colour</div>
+          </div>
+
+          <div class="field">
+            <label>Neutral Colour</label>
+            <input id="s-neutralColor" type="color" value="${CONFIG.neutralColor}">
+            <div class="hint">Non-selected brand colour</div>
           </div>
 
         </div>
@@ -341,8 +342,8 @@
       CONFIG.valueField    = document.getElementById('s-valueField').value;
       CONFIG.periodField   = document.getElementById('s-periodField').value;
       CONFIG.parameter     = document.getElementById('s-parameter').value;
-      CONFIG.bgColor       = document.getElementById('s-bgColor').value;
       CONFIG.selectedColor = document.getElementById('s-selectedColor').value;
+      CONFIG.neutralColor  = document.getElementById('s-neutralColor').value;
 
       if (_dashboard) {
         try {
@@ -355,7 +356,6 @@
         }
       }
 
-      applyBackground();
       overlay.remove();
 
       if (_dashboard) {
@@ -371,11 +371,6 @@
     const worksheets = _dashboard ? _dashboard.worksheets.map(ws => ws.name) : null;
     showSettings(worksheets);
   };
-
-  function applyBackground() {
-    document.body.style.background = CONFIG.bgColor;
-    document.documentElement.style.background = CONFIG.bgColor;
-  }
 
   // ─── LOAD TABLEAU API ─────────────────────────────────────────────────────
   function loadTableauAPI() {
@@ -393,7 +388,6 @@
   setTimeout(() => {
     const el = document.getElementById('chart');
     if (el.innerHTML.includes('Loading')) {
-      applyBackground();
       showSettings(null);
     }
   }, 3000);
@@ -401,7 +395,6 @@
   // ─── TABLEAU INIT ─────────────────────────────────────────────────────────
   loadTableauAPI().then(() => {
     if (typeof tableau === 'undefined') {
-      applyBackground();
       showSettings(null);
       return;
     }
@@ -420,8 +413,6 @@
 
       console.log('Loaded CONFIG:', JSON.stringify(CONFIG));
       console.log('All settings:', JSON.stringify(settings.getAll()));
-
-      applyBackground();
 
       if (!CONFIG.worksheet) {
         const worksheets = _dashboard.worksheets.map(ws => ws.name);
@@ -451,7 +442,6 @@
       });
 
     }).catch(() => {
-      applyBackground();
       showSettings(null);
     });
   });
@@ -545,7 +535,7 @@
         font-weight:400;">
         ${sel ? sel.value.toFixed(1) : '--'}
       </div>
-      <div style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;
+      <div style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;
         color:${D.banLabel.color};
         font-family:${D.banLabel.font};
         font-style:${D.banLabel.style};">
@@ -568,10 +558,13 @@
     const arcHover = d3.arc().innerRadius(inner).outerRadius(R+7).padAngle(0.028).cornerRadius(2);
     const pie      = d3.pie().value(d => d.value).sort(null);
 
+    // Use transparent fill for donut hole
+    const holeColor = CONFIG.bgColor === 'transparent' ? 'transparent' : CONFIG.bgColor;
+
     g.selectAll('path').data(pie(data)).join('path')
       .attr('d', arc)
       .attr('fill',         d => d.data.name === selectedBrand ? CONFIG.selectedColor : CONFIG.neutralColor)
-      .attr('stroke',       CONFIG.bgColor)
+      .attr('stroke',       holeColor)
       .attr('stroke-width', 2)
       .style('cursor',      'pointer')
       .on('mouseover', function() { d3.select(this).attr('d', arcHover); })
@@ -581,7 +574,10 @@
         renderChart(data, d.data.name, dashboard);
       });
 
-    g.append('circle').attr('r', inner - 2).attr('fill', CONFIG.bgColor);
+    g.append('circle')
+      .attr('r', inner - 2)
+      .attr('fill', holeColor)
+      .attr('fill-opacity', CONFIG.bgColor === 'transparent' ? 0 : 1);
 
     // Legend
     const legend = document.createElement('div');
@@ -590,8 +586,11 @@
       const isSelected = d.name === selectedBrand;
       const labelStyle = isSelected ? D.legendSelected : D.legendLabel;
       const item = document.createElement('div');
-      item.style.cssText = `display:flex;align-items:center;gap:7px;cursor:pointer;
+      item.style.cssText = `
+        display:flex;align-items:center;gap:7px;cursor:pointer;
         font-size:11px;
+        text-transform:uppercase;
+        letter-spacing:0.06em;
         color:${labelStyle.color};
         font-family:${labelStyle.font};`;
       item.innerHTML = `
@@ -650,13 +649,15 @@
       .style('font-family', d => d.name === selectedBrand ? D.valueLabelSel.font : D.valueLabel.font)
       .text(d => d.value.toFixed(1));
 
-    // X axis labels
+    // X axis brand name labels
     g.append('g').attr('transform', `translate(0,${h})`).call(d3.axisBottom(x).tickSize(0))
       .call(g => g.select('.domain').remove())
       .selectAll('text')
-      .style('fill',        d => d === selectedBrand ? D.axisLabelSel.color : D.axisLabel.color)
-      .style('font-size',   '11px')
-      .style('font-family', d => d === selectedBrand ? D.axisLabelSel.font : D.axisLabel.font)
+      .style('fill',             d => d === selectedBrand ? D.axisLabelSel.color : D.axisLabel.color)
+      .style('font-size',        '10px')
+      .style('font-family',      d => d === selectedBrand ? D.axisLabelSel.font : D.axisLabel.font)
+      .style('text-transform',   'uppercase')
+      .style('letter-spacing',   '0.06em')
       .attr('dy', '1.4em');
   }
 
@@ -690,14 +691,12 @@
     const line = d3.line().defined(d => d.value !== null)
       .x(d => x(d.period)).y(d => y(d.value)).curve(d3.curveMonotoneX);
 
-    // Non-selected lines
     grouped.filter(b => b.name !== selectedBrand).forEach(brand => {
       g.append('path').datum(brand.values)
         .attr('fill', 'none').attr('stroke', CONFIG.neutralColor)
         .attr('stroke-width', 1).attr('opacity', 0.5).attr('d', line);
     });
 
-    // Selected line
     const selBrand = grouped.find(b => b.name === selectedBrand);
     if (selBrand) {
       g.append('path').datum(selBrand.values)
@@ -715,9 +714,11 @@
       .call(d3.axisBottom(x).tickSize(3))
       .call(g => g.select('.domain').attr('stroke', D.gridColor))
       .selectAll('text')
-      .style('fill',        D.axisX.color)
-      .style('font-size',   '11px')
-      .style('font-family', D.axisX.font);
+      .style('fill',           D.axisX.color)
+      .style('font-size',      '11px')
+      .style('font-family',    D.axisX.font)
+      .style('text-transform', 'uppercase')
+      .style('letter-spacing', '0.06em');
 
     // Y axis
     g.append('g')
