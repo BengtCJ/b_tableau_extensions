@@ -74,6 +74,13 @@ List options. Try option A as minimal proof of concept. Test it.
 If it fails, note why, delete it, try B. Clean up failures.
 Report only what worked and why. After each attempt tell me what to look for and what success looks like.
 
+## End of session
+At the end of every session, suggest updates to the MD files that reflect what changed:
+- `context.md` — move completed items to "What's Working", update Known Issues
+- `tasks.md` — tick completed items, add new ones discovered
+- `plan.md` — update status table if chart types or architecture changed
+- `client_brand_investigation.md` (or equivalent handoff doc) — mark resolved or add new findings
+
 ## Token discipline
 - Use grep/head/tail for targeted checks, not full file reads
 - Prove concepts in 10 lines before full implementation

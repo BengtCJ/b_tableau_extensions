@@ -16,6 +16,7 @@
 - [x] Settings save via Tableau Extensions Settings API
 - [x] Parameter change listener (re-renders on brand select)
 - [x] Filter change listener
+- [x] Client brand highlights pink on load (parameter alias fix — prefer `value` over `formattedValue`)
 
 ## In Progress 🔄
 - [ ] Verify settings persistence on Tableau Cloud after publish

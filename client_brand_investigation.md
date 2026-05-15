@@ -1,5 +1,19 @@
 # Client Brand Selection — Investigation Handoff
 
+## ✅ RESOLVED — 2026-05-15
+
+**Root cause:** Tableau parameter had an alias. `currentValue.value = "ILLY"` (the raw stored value) but `currentValue.formattedValue = "Illy Coffee"` (the display alias). The code was reading `formattedValue` first, so `raw = "Illy Coffee"` never matched `"ILLY"` in `data[].name` even case-insensitively.
+
+**Fix (index.html ~line 553):** Swap priority to prefer `value` over `formattedValue`:
+```js
+const raw = (param.currentValue.value || param.currentValue.formattedValue || '').trim();
+```
+`"ILLY".toLowerCase() === "ILLY".toLowerCase()` → match found → correct brand highlighted on load.
+
+**Also discovered:** Tableau's `currentValue` object exposes properties via getters even though internal storage uses `_value`, `_formattedValue`, etc. The public API accessors (`value`, `formattedValue`) work correctly.
+
+---
+
 ## Goal
 On extension load, the **client brand** (the one named in the `Select Client Brand` Tableau parameter) should render in pink (`CONFIG.selectedColor = '#e994a2'`); all other brands grey (`CONFIG.neutralColor = '#7d7d7d'`). Clicks should override and pin the clicked brand pink — that part works.
 
