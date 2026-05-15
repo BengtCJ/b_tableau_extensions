@@ -203,7 +203,7 @@
 
   <script>
   // ─── VERSION ──────────────────────────────────────────────────────────────
-  const VERSION = '2026-05-15.2';
+  const VERSION = '2026-05-15.3';
 
   // ─── FONTS ────────────────────────────────────────────────────────────────
   const FONT_TITLE = "'Baskerville', Georgia, serif";
@@ -551,15 +551,10 @@
         const allParams = await dashboard.getParametersAsync();
         const param = allParams.find(p => p.name === CONFIG.parameter);
         if (param) {
-          console.log('[brand-diag] param.currentValue:', JSON.stringify(param.currentValue));
-          console.log('[brand-diag] param.dataType:', param.dataType);
-          console.log('[brand-diag] data names:', data.map(d => JSON.stringify(d.name)));
-          const raw = (param.currentValue.formattedValue || param.currentValue.value || '').trim();
+          const raw = (param.currentValue.value || param.currentValue.formattedValue || '').trim();
           const match = data.find(d => d.name.trim().toLowerCase() === raw.toLowerCase());
-          console.log('[brand-diag] raw:', JSON.stringify(raw), '| match:', match ? match.name : 'NONE');
           _selectedBrand = match ? match.name : (data[0]?.name || '');
         } else {
-          console.warn('[brand-diag] param not found:', CONFIG.parameter);
           _selectedBrand = data[0]?.name || '';
         }
       }
