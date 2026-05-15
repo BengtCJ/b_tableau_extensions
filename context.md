@@ -5,13 +5,13 @@ Extension is live and working on Tableau Cloud.
 Single file: `index.html` hosted on GitHub Pages.
 
 ## What's Working
-- All 4 chart types render with sample data in browser
+- **All 20 chart types** render with sample data in browser (CHARTS.md spec fully implemented)
 - Settings dialog opens on first load (no worksheet configured)
 - Settings save via Tableau Extensions Settings API
 - ResizeObserver re-renders on container resize — **debounced 150ms** (no stutter during panel drag)
 - Donut: BAN number + legend + interactive segment click; **radius capped** (no overflow into legend in wide containers)
 - Bar: sorted, selected brand highlighted, value labels; **auto-switches to horizontal layout** when `H < 220` or `H < W * 0.35`; left margin 44px
-- Line: multi-brand, selected on top with dots; **click handlers on paths, dots, and right-margin labels** (selection was previously broken)
+- Line: multi-brand, selected on top with dots; **click handlers on paths, dots, and right-margin labels**
 - BAN: headline number + brand name
 - Brand names always Tableau Light + uppercase throughout; **truncated at 8 chars** when container < 500px wide
 - Background: transparent by default (works on Cloud), colour picker for Desktop
@@ -19,6 +19,8 @@ Single file: `index.html` hosted on GitHub Pages.
 - **SVG sizing via `viewBox` + CSS 100%** on bar and line — no more hard clipping at iframe edges
 - **Selection state validated** on every re-render — if selected brand is filtered out of data, resets to `data[0]`
 - **Font: Baskervville** (Google Fonts, double-v) loaded via `<link>`, set as primary in `FONT_TITLE` with `Baskerville` as fallback — renders correctly on Cloud/Windows
+- **Metric ID filter** — `metricId` setting filters each dashboard tile to its own `indicator_id`; blank = all rows returned (debug affordance)
+- **Period selector** — snapshot charts (ban, bar, donut, hbar, etc.) show an All · Q1 · Q2 · Q3 · Q4 button strip when data has ≥ 2 periods; period change is client-side (no new Tableau query); resets to All on data refresh or settings save
 
 ## Known Issues / In Progress
 - Settings persistence on Cloud needs verification after allowlisting with full data access
@@ -41,3 +43,4 @@ Single file: `index.html` hosted on GitHub Pages.
 - Connect extension to real Tableau worksheet data
 - Verify settings persistence after publish to Cloud
 - Test parameter change triggers re-render on Cloud
+- Verify period selector appears correctly with real multi-quarter data

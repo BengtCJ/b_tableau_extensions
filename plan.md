@@ -34,6 +34,7 @@ Configured via ⚙ settings dialog — no URL params needed.
 
 Key settings:
 - chart, worksheet, brandField, valueField, periodField
+- metricId — filters to a specific `indicator_id` value (blank = all rows)
 - parameter (Select Brand)
 - selectedColor, neutralColor, bgColor
 
@@ -43,9 +44,16 @@ Tableau Parameter (Select Brand)
   → ParameterChanged event
     → fetchAndRender(worksheet)
       → getSummaryDataAsync()
-        → renderChart(data, selectedBrand)
-          → renderDonut/Bar/Line/BAN
+        → indicator filter (CONFIG.metricId → _allData)
+          → renderWithPeriod()
+            → period filter (_selectedPeriod → data slice)
+              → renderChart(data, selectedBrand)
+                → renderDonut/Bar/Line/BAN/…
 ```
+
+Period selector (All · Q1 · Q2 …) is injected into the chart container by
+`injectPeriodSelector()` at the top of `renderChart`. Clicking a period button
+calls `renderWithPeriod()` directly — no new Tableau query.
 
 ## Design System
 ```

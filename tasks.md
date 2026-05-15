@@ -28,17 +28,18 @@
 - [x] Selection validation: `_selectedBrand` reset to `data[0]` if filtered brand disappears
 - [x] Donut radius cap: `min(H*0.44, available*0.5, 120)` with compact 60px cap when `H < 200`
 - [x] Font fallback: `Baskervville` (Google Fonts) as primary; `Baskerville` as fallback in `FONT_TITLE`
+- [x] All 20 chart types built (full CHARTS.md spec — BANs, line-straight, line-smooth, slope, area-100, stream, treemap, treemap-bar, bubbles, inset-bubble, progress-ring, waffle, hbar, vbar-stacked, scale-figma, multiscale, dot-matrix, small-multiples, arc)
+- [x] Metric ID filter — `metricId` setting filters to `indicator_id` column; blank = all rows
+- [x] Period selector — `renderWithPeriod()` + `injectPeriodSelector()`: All/Q1/Q2/Q3/Q4 button strip on snapshot charts; client-side filter on `_allData`, no extra Tableau query; resets on settings save
 
 ## In Progress 🔄
 - [ ] Verify settings persistence on Tableau Cloud after publish
-- [ ] Connect to real worksheet data (vis_bss or similar)
+- [ ] Connect to real worksheet data
 - [ ] Confirm parameter change triggers re-render on Cloud
 
 ## Up Next 🔲
-- [ ] Test all 4 chart types with real data
+- [ ] Test all chart types with real multi-period data; verify period selector appears and filters correctly
 - [ ] Fix donut hole colour for non-transparent backgrounds
-- [ ] Add bubble chart type
-- [ ] Add progress bar chart type (matching vis_bss style)
 - [ ] Create CLAUDE.md global file (~/.claude/CLAUDE.md)
 - [ ] Document per-dashboard setup instructions for team
 
