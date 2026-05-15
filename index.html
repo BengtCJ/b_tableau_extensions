@@ -261,7 +261,7 @@
 
   <script>
   // ─── VERSION ──────────────────────────────────────────────────────────────
-  const VERSION = '2026-05-16.1';
+  const VERSION = '2026-05-16.2';
 
   // ─── FONTS ────────────────────────────────────────────────────────────────
   const FONT_TITLE = "'Baskervville', 'Baskerville', Georgia, serif";
@@ -692,6 +692,26 @@
       }
       metricInput.addEventListener('input', () => filter(metricInput.value));
       filter(metricInput.value);
+    })();
+
+    // Worksheet name → metric ID auto-detect
+    (function() {
+      const KNOWN_METRICS = ['tam','cagr','svt','sop','cra','bss','dvtr','sstsr','eqr','sov','vom','nps','ba','ebl','bt'];
+      function detectMetric(name) {
+        const words = name.toLowerCase().replace(/[^a-z0-9]/g, ' ').split(/\s+/);
+        return KNOWN_METRICS.find(function(m) { return words.indexOf(m) !== -1; }) || '';
+      }
+      function tryAutoFill(wsName) {
+        var metricInput = document.getElementById('s-metric');
+        if (metricInput.value.trim()) return;
+        var detected = detectMetric(wsName);
+        if (detected) {
+          metricInput.value = detected;
+          metricInput.dispatchEvent(new Event('input'));
+        }
+      }
+      tryAutoFill(document.getElementById('s-worksheet').value);
+      document.getElementById('s-worksheet').addEventListener('change', function() { tryAutoFill(this.value); });
     })();
 
     // Reload column suggestions when worksheet changes
