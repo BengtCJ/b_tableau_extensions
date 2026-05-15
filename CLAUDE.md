@@ -64,6 +64,9 @@ Default selectedColor: `#e994a2` | neutralColor: `#7d7d7d` | bgColor: `transpare
 - All chart sizing uses `el.offsetWidth / el.offsetHeight` (not vw/vh — breaks in iframes)
 - Brand names always `text-transform: uppercase` + `FONT_LIGHT`
 
+## Syntax Validation
+- After any JavaScript edit, check for `??` (nullish coalescing) and other ES2020+ operators — Tableau's embedded browser may not support them; use ternary equivalents instead
+
 ## Anti-overengineering
 Ultrathink first. Explore existing code. Make only minimal necessary changes.
 Reuse what exists. No new abstractions unless explicitly asked.
