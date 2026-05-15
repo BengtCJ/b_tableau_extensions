@@ -261,7 +261,7 @@
 
   <script>
   // ─── VERSION ──────────────────────────────────────────────────────────────
-  const VERSION = '2026-05-15.13';
+  const VERSION = '2026-05-15.14';
 
   // ─── FONTS ────────────────────────────────────────────────────────────────
   const FONT_TITLE = "'Baskervville', 'Baskerville', Georgia, serif";
@@ -2138,7 +2138,8 @@
     if (H < 120) { showTooSmall(el); return; }
     if (!data || !data.length) { showEmpty(el); return; }
 
-    const scoreW = 52, trackW = W - scoreW;
+    const padH = 8;
+    const scoreW = 52, trackW = W - scoreW - padH * 2;
     const trackH = H < 220 ? 24 : 34;
     const barH   = H < 220 ? 18 : 28;
     const rowGap = 5;
@@ -2151,7 +2152,7 @@
     const domain = [d3.min(data, d => d.value) * 0.95, d3.max(data, d => d.value) * 1.05];
     const xScale = d3.scaleLinear().domain(domain).range([0, trackW]);
 
-    el.style.padding = '8px 0';
+    el.style.padding = padH + 'px';
     el.style.overflow = 'hidden';
 
     sorted.forEach((d, i) => {
