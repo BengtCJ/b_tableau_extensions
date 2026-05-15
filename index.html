@@ -215,7 +215,7 @@
 
   <script>
   // ─── VERSION ──────────────────────────────────────────────────────────────
-  const VERSION = '2026-05-15.4';
+  const VERSION = '2026-05-15.5';
 
   // ─── FONTS ────────────────────────────────────────────────────────────────
   const FONT_TITLE = "'Baskerville', Georgia, serif";
@@ -227,6 +227,26 @@
   const COL_LIGHT_GREY = '#e6e6e6';
   const COL_DARK_GREY  = '#666666';
   const COL_GRID       = '#444444';
+
+  // ─── METRIC → CHART MAPPING ───────────────────────────────────────────────
+  // First chart in each array = recommended (primary). Others = alternatives.
+  const METRIC_CHARTS = {
+    tam:   ['ban'],
+    cagr:  ['ban'],
+    svt:   ['line-straight', 'line-smooth', 'small-multiples'],
+    sop:   ['scale-figma', 'slope'],
+    cra:   ['hbar'],
+    bss:   ['area-100', 'treemap-bar', 'slope', 'stream', 'bubbles', 'small-multiples'],
+    dvtr:  ['bans', 'hbar', 'scale-figma'],
+    sstsr: ['hbar'],
+    eqr:   ['vbar-stacked', 'inset-bubble', 'progress-ring', 'waffle'],
+    sov:   ['area-100', 'treemap-bar', 'bubbles', 'inset-bubble', 'stream', 'small-multiples'],
+    vom:   ['line-smooth', 'line-straight'],
+    nps:   ['waffle', 'dot-matrix', 'inset-bubble', 'arc', 'bans'],
+    ba:    ['multiscale'],
+    ebl:   ['vbar-stacked', 'inset-bubble'],
+    bt:    ['scale-figma', 'bans'],
+  };
 
   // ─── DESIGN SYSTEM ────────────────────────────────────────────────────────
   function buildDesign() {
@@ -312,6 +332,7 @@
   // ─── DEFAULT CONFIG ───────────────────────────────────────────────────────
   const DEFAULTS = {
     chart:         'donut',
+    metricId:      '',
     worksheet:     '',
     brandField:    'Brand Name Upper',
     valueField:    'SUM(Raw Value)',
@@ -483,6 +504,20 @@
         <div class="fields-grid">
 
           <div class="field">
+            <label>Metric / Indicator ID</label>
+            <input id="s-metric" type="text" value="${CONFIG.metricId}" list="s-metric-ids"
+              placeholder="e.g. bss, nps, sov — filters chart list">
+            <datalist id="s-metric-ids">
+              <option value="tam"><option value="cagr"><option value="svt">
+              <option value="sop"><option value="cra"><option value="bss">
+              <option value="dvtr"><option value="sstsr"><option value="eqr">
+              <option value="sov"><option value="vom"><option value="nps">
+              <option value="ba"><option value="ebl"><option value="bt">
+            </datalist>
+            <div id="s-chart-metric-hint" class="hint" style="color:#e994a2"></div>
+          </div>
+
+          <div class="field">
             <label>Chart Type</label>
             <select id="s-chart">
               <option value="donut"          ${CONFIG.chart==='donut'          ?'selected':''}>Donut</option>
@@ -568,6 +603,40 @@
 
     document.body.appendChild(overlay);
 
+    // Metric-based chart filtering
+    (function() {
+      const metricInput = document.getElementById('s-metric');
+      const chartSelect = document.getElementById('s-chart');
+      const hint        = document.getElementById('s-chart-metric-hint');
+      const LABELS = {
+        'ban':'BAN','bans':'BANs','line-straight':'Line Straight',
+        'line-smooth':'Line Smooth','slope':'Slope','area-100':'Stacked Area',
+        'stream':'Stream','treemap':'Treemap','treemap-bar':'Treemap Bar',
+        'bubbles':'Bubbles','inset-bubble':'Inset Bubble','progress-ring':'Progress Ring',
+        'waffle':'Waffle','hbar':'Horizontal Bar','vbar-stacked':'Vert. Bar Stacked',
+        'scale-figma':'Scale · Figma','multiscale':'Multi-scale Dots',
+        'dot-matrix':'Dot Matrix','small-multiples':'Small Multiples','arc':'Arc',
+      };
+      function filter(id) {
+        const charts = METRIC_CHARTS[id.trim().toLowerCase()];
+        Array.from(chartSelect.options).forEach(opt => {
+          opt.hidden = charts ? !charts.includes(opt.value) : false;
+        });
+        if (charts) {
+          hint.textContent = '★ Recommended: ' + (LABELS[charts[0]] || charts[0]);
+          if (chartSelect.selectedOptions.length && chartSelect.selectedOptions[0].hidden) {
+            const first = Array.from(chartSelect.options).find(o => !o.hidden);
+            if (first) chartSelect.value = first.value;
+          }
+        } else {
+          hint.textContent = id.trim() ? 'Unknown metric ID' : '';
+          hint.style.color = id.trim() ? '#666' : '#e994a2';
+        }
+      }
+      metricInput.addEventListener('input', () => filter(metricInput.value));
+      filter(metricInput.value);
+    })();
+
     // Reload column suggestions when worksheet changes
     document.getElementById('s-worksheet').addEventListener('change', async function() {
       const cols = await loadColumnOptions(this.value);
@@ -586,6 +655,7 @@
 
     document.getElementById('s-save').onclick = async () => {
       CONFIG.chart         = document.getElementById('s-chart').value;
+      CONFIG.metricId      = document.getElementById('s-metric').value.trim().toLowerCase();
       CONFIG.worksheet     = document.getElementById('s-worksheet').value;
       CONFIG.brandField    = document.getElementById('s-brandField').value;
       CONFIG.valueField    = document.getElementById('s-valueField').value;
