@@ -4,6 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>BP Chart Extensions</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Baskervville:ital@0;1&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
   <script src="tableau.extensions.js" onerror="console.warn('tableau.extensions.js not found')"></script>
   <style>
@@ -31,8 +33,8 @@
     #chart {
       width: 100%;
       height: 100%;
-      min-height: 300px;
       display: block;
+      overflow: hidden;
     }
 
     .error {
@@ -215,10 +217,10 @@
 
   <script>
   // ─── VERSION ──────────────────────────────────────────────────────────────
-  const VERSION = '2026-05-15.5';
+  const VERSION = '2026-05-15.6';
 
   // ─── FONTS ────────────────────────────────────────────────────────────────
-  const FONT_TITLE = "'Baskerville', Georgia, serif";
+  const FONT_TITLE = "'Baskervville', 'Baskerville', Georgia, serif";
   const FONT_BODY  = "'Tableau Regular', Georgia, serif";
   const FONT_LIGHT = "'Tableau Light', Georgia, serif";
 
@@ -791,10 +793,12 @@
         if (param) {
           const raw = (param.currentValue.value || param.currentValue.formattedValue || '').trim();
           const match = data.find(d => d.name.trim().toLowerCase() === raw.toLowerCase());
-          _selectedBrand = match ? match.name : (data[0]?.name || '');
+          _selectedBrand = match ? match.name : (data[0] ? data[0].name : '');
         } else {
-          _selectedBrand = data[0]?.name || '';
+          _selectedBrand = data[0] ? data[0].name : '';
         }
+      } else if (!data.find(d => d.name === _selectedBrand)) {
+        _selectedBrand = data[0] ? data[0].name : null;
       }
       renderChart(data, _selectedBrand, dashboard);
     } catch(err) {
@@ -854,11 +858,18 @@
     );
   }
 
+  // ─── HELPERS ─────────────────────────────────────────────────────────────
+  function truncLabel(name, containerW) {
+    if (containerW >= 500 || name.length <= 9) return name;
+    return name.slice(0, 8) + '…';
+  }
+
   // ─── CHART: DONUT ─────────────────────────────────────────────────────────
   function renderDonut(el, data, selectedBrand, dashboard, D) {
     const W = el.offsetWidth  || window.innerWidth  || 480;
     const H = el.offsetHeight || window.innerHeight || 300;
-    const R = Math.min(H * 0.44, W * 0.28);
+    const available = W - 290;
+    const R = Math.min(H * 0.44, available * 0.5, 120, H < 200 ? 60 : Infinity);
     const inner = R * 0.46;
 
     el.style.display        = 'flex';
@@ -947,61 +958,113 @@
 
   // ─── CHART: BAR ───────────────────────────────────────────────────────────
   function renderBar(el, data, selectedBrand, dashboard, D) {
-    const W = el.offsetWidth  || window.innerWidth  || 500;
-    const H = el.offsetHeight || window.innerHeight || 300;
-    const m = { top: 24, right: 16, bottom: 48, left: 16 };
-    const w = W - m.left - m.right;
-    const h = H - m.top  - m.bottom;
+    const rect = el.getBoundingClientRect();
+    const W = rect.width  || 500;
+    const H = rect.height || 300;
 
     const sorted = [...data].sort((a, b) => b.value - a.value);
-    const svg = d3.select(el).append('svg').attr('width', W).attr('height', H);
-    const g   = svg.append('g').attr('transform', `translate(${m.left},${m.top})`);
+    const svg = d3.select(el).append('svg')
+      .attr('viewBox', `0 0 ${W} ${H}`)
+      .style('width',   '100%')
+      .style('height',  '100%')
+      .style('display', 'block');
 
-    const x = d3.scaleBand().domain(sorted.map(d => d.name)).range([0, w]).padding(0.28);
-    const y = d3.scaleLinear().domain([0, d3.max(data, d => d.value) * 1.15]).range([h, 0]);
+    const isHorizontal = H < 220 || H < W * 0.35;
 
-    g.selectAll('rect').data(sorted).join('rect')
-      .attr('x',      d => x(d.name))
-      .attr('y',      d => y(d.value))
-      .attr('width',  x.bandwidth())
-      .attr('height', d => h - y(d.value))
-      .attr('fill',   d => d.name === selectedBrand ? CONFIG.selectedColor : CONFIG.neutralColor)
-      .attr('rx', 2)
-      .style('cursor', 'pointer')
-      .on('click', async (e, d) => {
-        await selectBrand(d.name, dashboard);
-      });
+    if (isHorizontal) {
+      const m = { top: 8, right: 48, bottom: 8, left: 88 };
+      const w = W - m.left - m.right;
+      const h = H - m.top  - m.bottom;
+      const g = svg.append('g').attr('transform', `translate(${m.left},${m.top})`);
 
-    g.selectAll('.vl').data(sorted).join('text')
-      .attr('class', 'vl')
-      .attr('x', d => x(d.name) + x.bandwidth() / 2)
-      .attr('y', d => y(d.value) - 5)
-      .attr('text-anchor', 'middle')
-      .style('fill',        d => d.name === selectedBrand ? D.valueLabelSel.color : D.valueLabel.color)
-      .style('font-size',   '11px')
-      .style('font-family', d => d.name === selectedBrand ? D.valueLabelSel.font : D.valueLabel.font)
-      .text(d => d.value.toFixed(1));
+      const y = d3.scaleBand().domain(sorted.map(d => d.name)).range([0, h]).padding(0.22);
+      const x = d3.scaleLinear().domain([0, d3.max(data, d => d.value) * 1.15]).range([0, w]);
 
-    g.append('g').attr('transform', `translate(0,${h})`).call(d3.axisBottom(x).tickSize(0))
-      .call(g => g.select('.domain').remove())
-      .selectAll('text')
-      .style('fill',           d => d === selectedBrand ? D.axisLabelSel.color : D.axisLabel.color)
-      .style('font-size',      '10px')
-      .style('font-family',    d => d === selectedBrand ? D.axisLabelSel.font : D.axisLabel.font)
-      .style('text-transform', 'uppercase')
-      .style('letter-spacing', '0.06em')
-      .attr('dy', '1.4em');
+      g.selectAll('rect').data(sorted).join('rect')
+        .attr('x',      0)
+        .attr('y',      d => y(d.name))
+        .attr('width',  d => x(d.value))
+        .attr('height', y.bandwidth())
+        .attr('fill',   d => d.name === selectedBrand ? CONFIG.selectedColor : CONFIG.neutralColor)
+        .attr('rx', 2)
+        .style('cursor', 'pointer')
+        .on('click', async (e, d) => { await selectBrand(d.name, dashboard); });
+
+      g.selectAll('.vl').data(sorted).join('text')
+        .attr('class', 'vl')
+        .attr('x', d => x(d.value) + 4)
+        .attr('y', d => y(d.name) + y.bandwidth() / 2)
+        .attr('dominant-baseline', 'middle')
+        .style('fill',        d => d.name === selectedBrand ? D.valueLabelSel.color : D.valueLabel.color)
+        .style('font-size',   '10px')
+        .style('font-family', d => d.name === selectedBrand ? D.valueLabelSel.font : D.valueLabel.font)
+        .text(d => d.value.toFixed(1));
+
+      g.selectAll('.lbl').data(sorted).join('text')
+        .attr('class', 'lbl')
+        .attr('x', -6)
+        .attr('y', d => y(d.name) + y.bandwidth() / 2)
+        .attr('text-anchor',      'end')
+        .attr('dominant-baseline','middle')
+        .style('fill',           d => d.name === selectedBrand ? D.axisLabelSel.color : D.axisLabel.color)
+        .style('font-size',      '10px')
+        .style('font-family',    d => d.name === selectedBrand ? D.axisLabelSel.font : D.axisLabel.font)
+        .style('text-transform', 'uppercase')
+        .style('letter-spacing', '0.06em')
+        .text(d => truncLabel(d.name, W));
+
+    } else {
+      const m = { top: 24, right: 16, bottom: 48, left: 44 };
+      const w = W - m.left - m.right;
+      const h = H - m.top  - m.bottom;
+      const g = svg.append('g').attr('transform', `translate(${m.left},${m.top})`);
+
+      const x = d3.scaleBand().domain(sorted.map(d => d.name)).range([0, w]).padding(0.28);
+      const y = d3.scaleLinear().domain([0, d3.max(data, d => d.value) * 1.15]).range([h, 0]);
+
+      g.selectAll('rect').data(sorted).join('rect')
+        .attr('x',      d => x(d.name))
+        .attr('y',      d => y(d.value))
+        .attr('width',  x.bandwidth())
+        .attr('height', d => h - y(d.value))
+        .attr('fill',   d => d.name === selectedBrand ? CONFIG.selectedColor : CONFIG.neutralColor)
+        .attr('rx', 2)
+        .style('cursor', 'pointer')
+        .on('click', async (e, d) => { await selectBrand(d.name, dashboard); });
+
+      g.selectAll('.vl').data(sorted).join('text')
+        .attr('class', 'vl')
+        .attr('x', d => x(d.name) + x.bandwidth() / 2)
+        .attr('y', d => y(d.value) - 5)
+        .attr('text-anchor', 'middle')
+        .style('fill',        d => d.name === selectedBrand ? D.valueLabelSel.color : D.valueLabel.color)
+        .style('font-size',   '11px')
+        .style('font-family', d => d.name === selectedBrand ? D.valueLabelSel.font : D.valueLabel.font)
+        .text(d => d.value.toFixed(1));
+
+      g.append('g').attr('transform', `translate(0,${h})`).call(d3.axisBottom(x).tickSize(0))
+        .call(g => g.select('.domain').remove())
+        .selectAll('text')
+        .style('fill',           d => d === selectedBrand ? D.axisLabelSel.color : D.axisLabel.color)
+        .style('font-size',      '10px')
+        .style('font-family',    d => d === selectedBrand ? D.axisLabelSel.font : D.axisLabel.font)
+        .style('text-transform', 'uppercase')
+        .style('letter-spacing', '0.06em')
+        .attr('dy', '1.4em')
+        .text(d => truncLabel(d, W));
+    }
   }
 
   // ─── CHART: LINE ──────────────────────────────────────────────────────────
   function renderLine(el, data, selectedBrand, dashboard, D) {
-    const W = el.offsetWidth  || window.innerWidth  || 500;
-    const H = el.offsetHeight || window.innerHeight || 300;
-    const m = { top: 20, right: 24, bottom: 40, left: 40 };
+    const rect = el.getBoundingClientRect();
+    const W = rect.width  || 500;
+    const H = rect.height || 300;
+    const m = { top: 20, right: 88, bottom: 40, left: 40 };
     const w = W - m.left - m.right;
     const h = H - m.top  - m.bottom;
 
-    if (!data[0]?.period) { renderBar(el, data, selectedBrand, dashboard, buildDesign().bar); return; }
+    if (!data[0] || !data[0].period) { renderBar(el, data, selectedBrand, dashboard, buildDesign().bar); return; }
 
     const brands  = [...new Set(data.map(d => d.name))];
     const periods = [...new Set(data.map(d => d.period))];
@@ -1010,11 +1073,15 @@
       name:   brand,
       values: periods.map(period => ({
         period,
-        value: data.find(d => d.name === brand && d.period === period)?.value || null,
+        value: (data.find(d => d.name === brand && d.period === period) || {}).value || null,
       })).filter(d => d.value !== null),
     }));
 
-    const svg = d3.select(el).append('svg').attr('width', W).attr('height', H);
+    const svg = d3.select(el).append('svg')
+      .attr('viewBox', `0 0 ${W} ${H}`)
+      .style('width',   '100%')
+      .style('height',  '100%')
+      .style('display', 'block');
     const g   = svg.append('g').attr('transform', `translate(${m.left},${m.top})`);
 
     const x = d3.scalePoint().domain(periods).range([0, w]).padding(0.1);
@@ -1023,23 +1090,56 @@
     const line = d3.line().defined(d => d.value !== null)
       .x(d => x(d.period)).y(d => y(d.value)).curve(d3.curveMonotoneX);
 
+    // non-selected brands: visible path + wide invisible hit target
     grouped.filter(b => b.name !== selectedBrand).forEach(brand => {
       g.append('path').datum(brand.values)
         .attr('fill', 'none').attr('stroke', CONFIG.neutralColor)
-        .attr('stroke-width', 1).attr('opacity', 0.5).attr('d', line);
+        .attr('stroke-width', 1).attr('opacity', 0.5).attr('d', line)
+        .style('pointer-events', 'none');
+      g.append('path').datum(brand.values)
+        .attr('fill', 'none').attr('stroke', 'transparent')
+        .attr('stroke-width', 18).attr('d', line)
+        .style('cursor', 'pointer')
+        .on('click', (function(b) { return async function() { await selectBrand(b.name, dashboard); }; })(brand));
     });
 
     const selBrand = grouped.find(b => b.name === selectedBrand);
     if (selBrand) {
       g.append('path').datum(selBrand.values)
         .attr('fill', 'none').attr('stroke', CONFIG.selectedColor)
-        .attr('stroke-width', 2.5).attr('d', line);
+        .attr('stroke-width', 2.5).attr('d', line)
+        .style('pointer-events', 'none');
+      g.append('path').datum(selBrand.values)
+        .attr('fill', 'none').attr('stroke', 'transparent')
+        .attr('stroke-width', 18).attr('d', line)
+        .style('cursor', 'pointer')
+        .on('click', async function() { await selectBrand(selBrand.name, dashboard); });
 
       g.selectAll('.dot').data(selBrand.values).join('circle')
         .attr('class', 'dot')
         .attr('cx', d => x(d.period)).attr('cy', d => y(d.value))
-        .attr('r', 3.5).attr('fill', CONFIG.selectedColor);
+        .attr('r', 3.5).attr('fill', CONFIG.selectedColor)
+        .style('cursor', 'pointer')
+        .on('click', async function() { await selectBrand(selBrand.name, dashboard); });
     }
+
+    // right-margin brand labels
+    grouped.forEach(brand => {
+      const last = brand.values[brand.values.length - 1];
+      if (!last) return;
+      g.append('text')
+        .attr('x', x(last.period) + 6)
+        .attr('y', y(last.value))
+        .attr('dominant-baseline', 'middle')
+        .style('fill',           brand.name === selectedBrand ? CONFIG.selectedColor : CONFIG.neutralColor)
+        .style('font-size',      '10px')
+        .style('font-family',    FONT_LIGHT)
+        .style('text-transform', 'uppercase')
+        .style('letter-spacing', '0.06em')
+        .style('cursor',         'pointer')
+        .text(truncLabel(brand.name, W))
+        .on('click', (function(b) { return async function() { await selectBrand(b.name, dashboard); }; })(brand));
+    });
 
     g.append('g').attr('transform', `translate(0,${h})`)
       .call(d3.axisBottom(x).tickSize(3))
@@ -2308,8 +2408,12 @@
   }
 
   // ─── RESIZE OBSERVER ─────────────────────────────────────────────────────
+  let _resizeTimer;
   const resizeObserver = new ResizeObserver(() => {
-    if (_lastData) renderChart(_lastData, _lastSelected, _dashboard);
+    clearTimeout(_resizeTimer);
+    _resizeTimer = setTimeout(() => {
+      if (_lastData) renderChart(_lastData, _lastSelected, _dashboard);
+    }, 150);
   });
   resizeObserver.observe(document.getElementById('chart'));
 
