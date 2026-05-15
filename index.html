@@ -203,7 +203,7 @@
 
   <script>
   // ─── VERSION ──────────────────────────────────────────────────────────────
-  const VERSION = '2026-05-15.1';
+  const VERSION = '2026-05-15.2';
 
   // ─── FONTS ────────────────────────────────────────────────────────────────
   const FONT_TITLE = "'Baskerville', Georgia, serif";
@@ -556,7 +556,7 @@
           console.log('[brand-diag] data names:', data.map(d => JSON.stringify(d.name)));
           const raw = (param.currentValue.formattedValue || param.currentValue.value || '').trim();
           const match = data.find(d => d.name.trim().toLowerCase() === raw.toLowerCase());
-          console.log('[brand-diag] raw:', JSON.stringify(raw), '| match:', match?.name ?? 'NONE');
+          console.log('[brand-diag] raw:', JSON.stringify(raw), '| match:', match ? match.name : 'NONE');
           _selectedBrand = match ? match.name : (data[0]?.name || '');
         } else {
           console.warn('[brand-diag] param not found:', CONFIG.parameter);
