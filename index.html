@@ -217,7 +217,7 @@
 
   <script>
   // ─── VERSION ──────────────────────────────────────────────────────────────
-  const VERSION = '2026-05-15.7';
+  const VERSION = '2026-05-15.8';
 
   // ─── FONTS ────────────────────────────────────────────────────────────────
   const FONT_TITLE = "'Baskervville', 'Baskerville', Georgia, serif";
@@ -789,6 +789,17 @@
         return entry;
       }).filter(d => d.value > 0)
         .filter(d => !CONFIG.metricId || d.indicator === CONFIG.metricId);
+
+      // For snapshot charts, reduce to the latest period in the data.
+      // Multi-period charts (line, area, stream, etc.) receive all periods unchanged.
+      const multiPeriodCharts = ['line','line-smooth','line-straight','area-100','small-multiples','stream','slope'];
+      if (!multiPeriodCharts.includes(CONFIG.chart)) {
+        const periods = [...new Set(data.map(d => d.period).filter(Boolean))];
+        if (periods.length > 1) {
+          const latest = periods[periods.length - 1];
+          data = data.filter(d => d.period === latest);
+        }
+      }
 
       if (!_selectedBrand) {
         const allParams = await dashboard.getParametersAsync();
