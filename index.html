@@ -217,7 +217,7 @@
 
   <script>
   // ─── VERSION ──────────────────────────────────────────────────────────────
-  const VERSION = '2026-05-15.8';
+  const VERSION = '2026-05-15.9';
 
   // ─── FONTS ────────────────────────────────────────────────────────────────
   const FONT_TITLE = "'Baskervville', 'Baskerville', Georgia, serif";
@@ -779,7 +779,7 @@
         return;
       }
 
-      const data = rows.map(row => {
+      let data = rows.map(row => {
         const entry = {
           name:      row[brandIdx].formattedValue || row[brandIdx].value,
           value:     parseFloat(row[valueIdx].value) || 0,
