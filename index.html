@@ -67,7 +67,7 @@
       border: 1px solid #444;
       border-radius: 8px;
       padding: 20px;
-      width: 720px;
+      width: 480px;
       max-width: 95vw;
       color: #e6e6e6;
       font-family: 'Tableau Light', Georgia, serif;
@@ -94,7 +94,7 @@
 
     .fields-grid {
       display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
+      grid-template-columns: 1fr 1fr;
       gap: 10px 16px;
     }
 
@@ -139,21 +139,32 @@
       cursor: pointer;
     }
 
-    .transparent-row {
+    .inline-controls {
       display: flex;
       align-items: center;
-      gap: 6px;
-      margin-top: 5px;
+      gap: 8px;
     }
 
-    .transparent-row input[type="checkbox"] {
+    .inline-controls input[type="color"] {
+      width: 48px;
+      height: 30px;
+      padding: 2px;
+      background: #333333;
+      border: 1px solid #555;
+      border-radius: 4px;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    .inline-controls input[type="checkbox"] {
       accent-color: #e994a2;
       width: 13px;
       height: 13px;
       cursor: pointer;
+      flex-shrink: 0;
     }
 
-    .transparent-row span {
+    .inline-controls span {
       font-size: 10px;
       color: #666;
       font-family: 'Tableau Light', Georgia, serif;
@@ -166,14 +177,47 @@
       font-family: 'Tableau Light', Georgia, serif;
     }
 
-    .settings-footer {
+    details {
+      grid-column: 1 / -1;
+      margin-top: 4px;
+    }
+
+    details summary {
+      font-size: 10px;
+      color: #555;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      cursor: pointer;
+      user-select: none;
+      font-family: 'Tableau Light', Georgia, serif;
+      list-style: none;
       display: flex;
-      gap: 10px;
-      margin-top: 16px;
-      justify-content: flex-end;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 0;
+    }
+
+    details summary::-webkit-details-marker { display: none; }
+
+    details summary::before {
+      content: '▶';
+      font-size: 8px;
+      transition: transform 0.15s;
+    }
+
+    details[open] summary::before {
+      transform: rotate(90deg);
+    }
+
+    .fields-grid-advanced {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px 16px;
+      margin-top: 10px;
     }
 
     .btn {
+      width: 100%;
       padding: 6px 16px;
       border-radius: 4px;
       border: none;
@@ -217,7 +261,7 @@
 
   <script>
   // ─── VERSION ──────────────────────────────────────────────────────────────
-  const VERSION = '2026-05-15.9';
+  const VERSION = '2026-05-15.10';
 
   // ─── FONTS ────────────────────────────────────────────────────────────────
   const FONT_TITLE = "'Baskervville', 'Baskerville', Georgia, serif";
@@ -505,8 +549,8 @@
         <datalist id="s-columns">${colOptions}</datalist>
         <div class="fields-grid">
 
-          <div class="field">
-            <label>Metric / Indicator ID</label>
+          <div class="field field-full">
+            <label>Metric</label>
             <input id="s-metric" type="text" value="${CONFIG.metricId}" list="s-metric-ids"
               placeholder="e.g. bss, nps, sov — filters chart list">
             <datalist id="s-metric-ids">
@@ -519,8 +563,8 @@
             <div id="s-chart-metric-hint" class="hint" style="color:#e994a2"></div>
           </div>
 
-          <div class="field">
-            <label>Chart Type</label>
+          <div class="field field-full">
+            <label>Chart</label>
             <select id="s-chart">
               <option value="donut"          ${CONFIG.chart==='donut'          ?'selected':''}>Donut</option>
               <option value="bar"            ${CONFIG.chart==='bar'            ?'selected':''}>Bar</option>
@@ -548,57 +592,56 @@
             </select>
           </div>
 
-          <div class="field">
+          <div class="field field-full">
             <label>Worksheet</label>
             <select id="s-worksheet">${worksheetOptions}</select>
-            <div class="hint">Source of brand data</div>
           </div>
 
           <div class="field">
-            <label>Brand Field</label>
-            <input id="s-brandField" type="text" value="${CONFIG.brandField}" list="s-columns">
-          </div>
-
-          <div class="field">
-            <label>Value Field</label>
-            <input id="s-valueField" type="text" value="${CONFIG.valueField}" list="s-columns">
-          </div>
-
-          <div class="field">
-            <label>Period Field <span style="color:#555">(line only)</span></label>
-            <input id="s-periodField" type="text" value="${CONFIG.periodField}" list="s-columns">
-          </div>
-
-          <div class="field">
-            <label>Select Brand Parameter</label>
-            <input id="s-parameter" type="text" value="${CONFIG.parameter}">
-          </div>
-
-          <div class="field">
-            <label>Highlight Colour</label>
+            <label>Color</label>
             <input id="s-selectedColor" type="color" value="${CONFIG.selectedColor}">
-            <div class="hint">Selected brand colour</div>
           </div>
 
           <div class="field">
-            <label>Neutral Colour</label>
+            <label>Neutral</label>
             <input id="s-neutralColor" type="color" value="${CONFIG.neutralColor}">
-            <div class="hint">Non-selected brand colour</div>
           </div>
 
-          <div class="field">
-            <label>Background Colour</label>
-            <input id="s-bgColor" type="color" value="${bgColorValue}" ${isTransparent ? 'disabled' : ''} style="${isTransparent ? 'opacity:0.4' : ''}">
-            <div class="transparent-row">
+          <div class="field field-full">
+            <label>Background</label>
+            <div class="inline-controls">
+              <input id="s-bgColor" type="color" value="${bgColorValue}" ${isTransparent ? 'disabled' : ''} style="${isTransparent ? 'opacity:0.4' : ''}">
               <input type="checkbox" id="s-transparent" ${isTransparent ? 'checked' : ''}>
               <span>Transparent</span>
             </div>
           </div>
 
-        </div>
-        <div class="settings-footer">
+          <details>
+            <summary>Advanced</summary>
+            <div class="fields-grid-advanced">
+              <div class="field">
+                <label>Brand</label>
+                <input id="s-brandField" type="text" value="${CONFIG.brandField}" list="s-columns">
+              </div>
+              <div class="field">
+                <label>Value</label>
+                <input id="s-valueField" type="text" value="${CONFIG.valueField}" list="s-columns">
+              </div>
+              <div class="field">
+                <label>Period</label>
+                <input id="s-periodField" type="text" value="${CONFIG.periodField}" list="s-columns">
+              </div>
+              <div class="field">
+                <label>Parameter</label>
+                <input id="s-parameter" type="text" value="${CONFIG.parameter}">
+              </div>
+              <div class="hint" style="grid-column:1/-1">Defaults work for BP Index Scores; override if column names differ.</div>
+            </div>
+          </details>
+
           <button class="btn btn-secondary" id="s-cancel">Cancel</button>
           <button class="btn btn-primary" id="s-save">Save & Render</button>
+
         </div>
       </div>
     `;
