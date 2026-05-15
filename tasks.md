@@ -17,6 +17,17 @@
 - [x] Parameter change listener (re-renders on brand select)
 - [x] Filter change listener
 - [x] Client brand highlights pink on load (parameter alias fix — prefer `value` over `formattedValue`)
+- [x] ResizeObserver debounced 150ms — no stutter during panel drag
+- [x] SVG clipping fixed — bar & line use `viewBox` + CSS 100% sizing via `getBoundingClientRect()`
+- [x] `#chart` CSS: removed `min-height:300px`, added `overflow:hidden`
+- [x] Bar chart: left margin raised to 44px (was 16, clipped axis labels)
+- [x] Bar chart: auto horizontal layout when `H < 220` or `H < W * 0.35`
+- [x] `truncLabel` helper — brand names truncated to 8 chars + ellipsis when container < 500px
+- [x] Line chart: click handlers on line paths (18px transparent hit target), dots, and right-margin labels
+- [x] Line chart: right-margin brand labels added (m.right expanded to 88px)
+- [x] Selection validation: `_selectedBrand` reset to `data[0]` if filtered brand disappears
+- [x] Donut radius cap: `min(H*0.44, available*0.5, 120)` with compact 60px cap when `H < 200`
+- [x] Font fallback: `Baskervville` (Google Fonts) as primary; `Baskerville` as fallback in `FONT_TITLE`
 
 ## In Progress 🔄
 - [ ] Verify settings persistence on Tableau Cloud after publish

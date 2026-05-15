@@ -8,17 +8,17 @@ Single file: `index.html` hosted on GitHub Pages.
 - All 4 chart types render with sample data in browser
 - Settings dialog opens on first load (no worksheet configured)
 - Settings save via Tableau Extensions Settings API
-- ResizeObserver re-renders on container resize
-- Donut: BAN number + legend + interactive segment click
-- Bar: sorted, selected brand highlighted, value labels
-- Line: multi-brand, selected on top with dots
+- ResizeObserver re-renders on container resize — **debounced 150ms** (no stutter during panel drag)
+- Donut: BAN number + legend + interactive segment click; **radius capped** (no overflow into legend in wide containers)
+- Bar: sorted, selected brand highlighted, value labels; **auto-switches to horizontal layout** when `H < 220` or `H < W * 0.35`; left margin 44px
+- Line: multi-brand, selected on top with dots; **click handlers on paths, dots, and right-margin labels** (selection was previously broken)
 - BAN: headline number + brand name
-- Brand names always Tableau Light + uppercase throughout
+- Brand names always Tableau Light + uppercase throughout; **truncated at 8 chars** when container < 500px wide
 - Background: transparent by default (works on Cloud), colour picker for Desktop
 - **Client brand highlights pink on load** — parameter `value` (not `formattedValue`) matched against `Brand Name Upper` field; handles aliased parameters correctly
-
-## Deferred / To Do
-- **Font: Baskerville vs Baskervville** — code uses `'Baskerville'` (macOS system font, falls back to Georgia on Windows). Should switch to `'Baskervville'` (Google Fonts, double-v) + add `<link>` import so it renders correctly on Tableau Cloud/Windows. Two places: CSS line ~68 and JS constant `FONT_TITLE` line ~197.
+- **SVG sizing via `viewBox` + CSS 100%** on bar and line — no more hard clipping at iframe edges
+- **Selection state validated** on every re-render — if selected brand is filtered out of data, resets to `data[0]`
+- **Font: Baskervville** (Google Fonts, double-v) loaded via `<link>`, set as primary in `FONT_TITLE` with `Baskerville` as fallback — renders correctly on Cloud/Windows
 
 ## Known Issues / In Progress
 - Settings persistence on Cloud needs verification after allowlisting with full data access
