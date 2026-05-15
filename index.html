@@ -261,7 +261,7 @@
 
   <script>
   // ─── VERSION ──────────────────────────────────────────────────────────────
-  const VERSION = '2026-05-15.14';
+  const VERSION = '2026-05-15.15';
 
   // ─── FONTS ────────────────────────────────────────────────────────────────
   const FONT_TITLE = "'Baskervville', 'Baskerville', Georgia, serif";
@@ -352,7 +352,7 @@
   }
 
   function tidyToWide(data) {
-    const periods = [...new Set(data.map(d => d.period).filter(Boolean))];
+    const periods = [...new Set(data.map(d => d.period).filter(Boolean))].sort();
     return periods.map(p => {
       const row = { period: p };
       data.filter(d => d.period === p).forEach(d => { row[d.name] = d.value; });
@@ -1134,7 +1134,7 @@
     if (!data[0] || !data[0].period) { renderBar(el, data, selectedBrand, dashboard, buildDesign().bar); return; }
 
     const brands  = [...new Set(data.map(d => d.name))];
-    const periods = [...new Set(data.map(d => d.period))];
+    const periods = [...new Set(data.map(d => d.period))].sort();
 
     const grouped = brands.map(brand => ({
       name:   brand,
