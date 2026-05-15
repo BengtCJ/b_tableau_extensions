@@ -261,7 +261,7 @@
 
   <script>
   // ─── VERSION ──────────────────────────────────────────────────────────────
-  const VERSION = '2026-05-15.11';
+  const VERSION = '2026-05-15.12';
 
   // ─── FONTS ────────────────────────────────────────────────────────────────
   const FONT_TITLE = "'Baskervville', 'Baskerville', Georgia, serif";
@@ -349,6 +349,15 @@
       ...data.filter(d => d.name !== primary),
       ...data.filter(d => d.name === primary),
     ];
+  }
+
+  function tidyToWide(data) {
+    const periods = [...new Set(data.map(d => d.period).filter(Boolean))];
+    return periods.map(p => {
+      const row = { period: p };
+      data.filter(d => d.period === p).forEach(d => { row[d.name] = d.value; });
+      return row;
+    });
   }
 
   function showTooSmall(el) {
@@ -881,11 +890,11 @@
       case 'line':           renderLine(el, data, selectedBrand, dashboard, D.line);             break;
       case 'ban':            renderBAN(el, data, selectedBrand, D.ban);                          break;
       case 'bans':           renderBANs(el, data, selectedBrand, D.bans);                        break;
-      case 'line-straight':  renderLineChart(el, data, selectedBrand, true);                     break;
-      case 'line-smooth':    renderLineChart(el, data, selectedBrand, false);                    break;
+      case 'line-straight':  renderLineChart(el, tidyToWide(data), selectedBrand, true);         break;
+      case 'line-smooth':    renderLineChart(el, tidyToWide(data), selectedBrand, false);        break;
       case 'slope':          renderSlope(el, data, selectedBrand, D.slope);                      break;
-      case 'area-100':       renderArea100(el, data, selectedBrand, D.area100);                  break;
-      case 'stream':         renderStream(el, data, selectedBrand, D.stream);                    break;
+      case 'area-100':       renderArea100(el, tidyToWide(data), selectedBrand, D.area100);      break;
+      case 'stream':         renderStream(el, tidyToWide(data), selectedBrand, D.stream);        break;
       case 'treemap':        renderTreemap(el, data, selectedBrand, D.treemap);                  break;
       case 'treemap-bar':    renderTreemapBar(el, data, selectedBrand, D.treemapBar);            break;
       case 'bubbles':        renderBubbles(el, data, selectedBrand, D.bubbles);                  break;
@@ -897,7 +906,7 @@
       case 'scale-figma':    renderScaleFigma(el, data, selectedBrand, D.scaleFigma);            break;
       case 'multiscale':     renderMultiScale(el, data, selectedBrand, D.multiscale);            break;
       case 'dot-matrix':     renderDotMatrix(el, data, selectedBrand, D.dotMatrix);              break;
-      case 'small-multiples':renderSmallMultiples(el, data, selectedBrand, D.smallMultiples);    break;
+      case 'small-multiples':renderSmallMultiples(el, tidyToWide(data), selectedBrand, D.smallMultiples); break;
       case 'arc':            renderArc(el, data, selectedBrand, D.arc);                          break;
       default: showError('Unknown chart type: "' + CONFIG.chart + '"');
     }
@@ -924,9 +933,9 @@
 
   // ─── CHART: DONUT ─────────────────────────────────────────────────────────
   function renderDonut(el, data, selectedBrand, dashboard, D) {
-    const W = el.offsetWidth  || window.innerWidth  || 480;
-    const H = el.offsetHeight || window.innerHeight || 300;
-    const available = W - 290;
+    const { width: W, height: H } = el.getBoundingClientRect();
+    if (!W || !H) return;
+    const available = Math.max(60, W - 290);
     const R = Math.min(H * 0.44, available * 0.5, 120, H < 200 ? 60 : Infinity);
     const inner = R * 0.46;
 
@@ -1222,7 +1231,8 @@
   // ─── CHART: BAN ───────────────────────────────────────────────────────────
   function renderBAN(el, data, selectedBrand, D) {
     const sel = data.find(d => d.name === selectedBrand) || data[0];
-    const W = el.offsetWidth || window.innerWidth || 200;
+    const { width: W } = el.getBoundingClientRect();
+    if (!W) return;
     const fontSize = Math.min(Math.max(W * 0.22, 40), 96);
 
     el.style.display        = 'flex';
@@ -1246,7 +1256,10 @@
 
   // ─── BANs ─────────────────────────────────────────────────────────────────
   function renderBANs(el, data, primary, D) {
-    const W = el.offsetWidth || 500, H = el.offsetHeight || 300;
+    const { width: W, height: H } = el.getBoundingClientRect();
+    if (!W || !H) return;
+    const primarySize = Math.min(D.primaryValue.size, Math.max(24, H * 0.42));
+    const compSize    = Math.min(D.compValue.size,    Math.max(16, H * 0.28));
     if (H < 120) { showTooSmall(el); return; }
     if (!data || !data.length) { showEmpty(el); return; }
 
@@ -1276,7 +1289,7 @@
       const val = document.createElement('div');
       val.setAttribute('data-brand', d.name);
       val.style.cssText = 'font-family:' + D.primaryValue.font + ';font-style:italic;' +
-        'font-size:' + (isPrimary ? D.primaryValue.size : D.compValue.size) + 'px;' +
+        'font-size:' + (isPrimary ? primarySize : compSize) + 'px;' +
         'color:' + (isPrimary ? D.primaryValue.color : D.compValue.color) + ';line-height:0.92;';
       val.textContent = d.value.toFixed(2);
 
@@ -1288,7 +1301,8 @@
 
   // ─── LINE CHART (straight + smooth) ──────────────────────────────────────
   function renderLineChart(el, data, primary, straight) {
-    const W = el.offsetWidth || 500, H = el.offsetHeight || 300;
+    const { width: W, height: H } = el.getBoundingClientRect();
+    if (!W || !H) return;
     if (H < 120) { showTooSmall(el); return; }
     if (!data || !data.length) { showEmpty(el); return; }
 
@@ -1304,7 +1318,8 @@
     const yPad = (vMax - vMin) * 0.1 || 1;
 
     const svgEl = document.createElementNS('http://www.w3.org/2000/svg','svg');
-    svgEl.setAttribute('width', W); svgEl.setAttribute('height', H);
+    svgEl.setAttribute('viewBox', `0 0 ${W} ${H}`);
+    svgEl.style.width = '100%'; svgEl.style.height = '100%'; svgEl.style.display = 'block';
     const svg = d3.select(svgEl);
     const g = svg.append('g').attr('transform', 'translate(' + mL + ',' + mT + ')');
 
@@ -1381,18 +1396,21 @@
 
   // ─── SLOPE CHART ──────────────────────────────────────────────────────────
   function renderSlope(el, data, primary, D) {
-    const W = el.offsetWidth || 500, H = el.offsetHeight || 300;
+    const { width: W, height: H } = el.getBoundingClientRect();
+    if (!W || !H) return;
     if (H < 120) { showTooSmall(el); return; }
     if (!data || !data.length) { showEmpty(el); return; }
 
     const mT = 32, mR = 90, mB = 12, mL = 90;
     const iW = W - mL - mR, iH = H - mT - mB;
+    if (iW < 80) { showTooSmall(el); return; }
 
     const allVals = data.flatMap(d => [d.v1, d.v2]);
     const y = d3.scaleLinear().domain([0, d3.max(allVals) * 1.1]).range([iH, 0]);
 
     const svgEl = document.createElementNS('http://www.w3.org/2000/svg','svg');
-    svgEl.setAttribute('width', W); svgEl.setAttribute('height', H);
+    svgEl.setAttribute('viewBox', `0 0 ${W} ${H}`);
+    svgEl.style.width = '100%'; svgEl.style.height = '100%'; svgEl.style.display = 'block';
     const g = d3.select(svgEl).append('g').attr('transform', 'translate(' + mL + ',' + mT + ')');
 
     // poles
@@ -1456,7 +1474,8 @@
 
   // ─── STACKED 100% AREA ───────────────────────────────────────────────────
   function renderArea100(el, data, primary, D) {
-    const W = el.offsetWidth || 500, H = el.offsetHeight || 300;
+    const { width: W, height: H } = el.getBoundingClientRect();
+    if (!W || !H) return;
     if (H < 120) { showTooSmall(el); return; }
     if (!data || !data.length) { showEmpty(el); return; }
 
@@ -1483,7 +1502,8 @@
     const compBrands = brandOrder.filter(b => b !== primary);
 
     const svgEl = document.createElementNS('http://www.w3.org/2000/svg','svg');
-    svgEl.setAttribute('width', W); svgEl.setAttribute('height', H);
+    svgEl.setAttribute('viewBox', `0 0 ${W} ${H}`);
+    svgEl.style.width = '100%'; svgEl.style.height = '100%'; svgEl.style.display = 'block';
     const g = d3.select(svgEl).append('g').attr('transform', 'translate(' + mL + ',' + mT + ')');
 
     series.forEach((s, i) => {
@@ -1537,7 +1557,8 @@
 
   // ─── STREAM GRAPH ─────────────────────────────────────────────────────────
   function renderStream(el, data, primary, D) {
-    const W = el.offsetWidth || 500, H = el.offsetHeight || 300;
+    const { width: W, height: H } = el.getBoundingClientRect();
+    if (!W || !H) return;
     if (H < 120) { showTooSmall(el); return; }
     if (!data || !data.length) { showEmpty(el); return; }
 
@@ -1566,7 +1587,8 @@
     const compBrands = brandOrder.filter(b => b !== primary);
 
     const svgEl = document.createElementNS('http://www.w3.org/2000/svg','svg');
-    svgEl.setAttribute('width', W); svgEl.setAttribute('height', H);
+    svgEl.setAttribute('viewBox', `0 0 ${W} ${H}`);
+    svgEl.style.width = '100%'; svgEl.style.height = '100%'; svgEl.style.display = 'block';
     const g = d3.select(svgEl).append('g').attr('transform', 'translate(' + mL + ',' + mT + ')');
 
     series.forEach((s, i) => {
@@ -1606,12 +1628,14 @@
 
   // ─── TREEMAP ──────────────────────────────────────────────────────────────
   function renderTreemap(el, data, primary, D) {
-    const W = el.offsetWidth || 500, H = el.offsetHeight || 300;
+    const { width: W, height: H } = el.getBoundingClientRect();
+    if (!W || !H) return;
     if (H < 120) { showTooSmall(el); return; }
     if (!data || !data.length) { showEmpty(el); return; }
 
     const svgEl = document.createElementNS('http://www.w3.org/2000/svg','svg');
-    svgEl.setAttribute('width', W); svgEl.setAttribute('height', H);
+    svgEl.setAttribute('viewBox', `0 0 ${W} ${H}`);
+    svgEl.style.width = '100%'; svgEl.style.height = '100%'; svgEl.style.display = 'block';
     const svg = d3.select(svgEl);
 
     const root = d3.hierarchy({ children: data }).sum(d => d.value);
@@ -1655,10 +1679,13 @@
 
   // ─── TREEMAP BAR ──────────────────────────────────────────────────────────
   function renderTreemapBar(el, data, primary, D) {
-    const W = el.offsetWidth || 500;
+    const { width: W } = el.getBoundingClientRect();
+    if (!W) return;
     if (!data || !data.length) { showEmpty(el); return; }
 
-    const H = 72, gap = 3;
+    const containerH = el.getBoundingClientRect().height;
+    const H = Math.min(72, containerH || 72), gap = 3;
+    if (containerH < 40) { showTooSmall(el); return; }
     const sorted = [...data].sort((a,b) => b.value - a.value);
     const total = d3.sum(sorted, d => d.value);
     const usableW = W - gap * (sorted.length - 1);
@@ -1666,7 +1693,8 @@
     const compBrands = sorted.filter(d => d.name !== primary);
 
     const svgEl = document.createElementNS('http://www.w3.org/2000/svg','svg');
-    svgEl.setAttribute('width', W); svgEl.setAttribute('height', H);
+    svgEl.setAttribute('viewBox', `0 0 ${W} ${H}`);
+    svgEl.style.width = '100%'; svgEl.style.height = '100%'; svgEl.style.display = 'block';
     const svg = d3.select(svgEl);
 
     let cx = 0;
@@ -1712,12 +1740,14 @@
 
   // ─── BUBBLES ──────────────────────────────────────────────────────────────
   function renderBubbles(el, data, primary, D) {
-    const W = el.offsetWidth || 500, H = el.offsetHeight || 300;
+    const { width: W, height: H } = el.getBoundingClientRect();
+    if (!W || !H) return;
     if (H < 120) { showTooSmall(el); return; }
     if (!data || !data.length) { showEmpty(el); return; }
 
     const svgEl = document.createElementNS('http://www.w3.org/2000/svg','svg');
-    svgEl.setAttribute('width', W); svgEl.setAttribute('height', H);
+    svgEl.setAttribute('viewBox', `0 0 ${W} ${H}`);
+    svgEl.style.width = '100%'; svgEl.style.height = '100%'; svgEl.style.display = 'block';
     const svg = d3.select(svgEl);
 
     const pack = d3.pack().size([W, H]).padding(4);
@@ -1759,34 +1789,36 @@
 
   // ─── INSET BUBBLE ─────────────────────────────────────────────────────────
   function renderInsetBubble(el, data, primary, D) {
-    const W = el.offsetWidth || 500, H = el.offsetHeight || 300;
+    const { width: W, height: H } = el.getBoundingClientRect();
+    if (!W || !H) return;
     if (H < 120) { showTooSmall(el); return; }
     if (!data || !data.length) { showEmpty(el); return; }
 
-    const reference = 100;
+    const reference = d3.max(data, d => d.value);
     const sorted = [
       ...data.filter(d => d.name === primary),
       ...[...data.filter(d => d.name !== primary)].sort((a,b) => b.value - a.value),
     ];
     const n = sorted.length;
     const slotW = W / n;
-    const R = Math.min(54, slotW / 2 - 10);
-    const cy = R + 16;
-    const svgH = R * 2 + 54;
+    const R = Math.min(54, slotW / 2 - 10, (H - 40) / 2);
+    const cy = H * 0.44;
+    const svgH = H;
 
     const svgEl = document.createElementNS('http://www.w3.org/2000/svg','svg');
-    svgEl.setAttribute('width', W); svgEl.setAttribute('height', svgH);
+    svgEl.setAttribute('viewBox', `0 0 ${W} ${svgH}`);
+    svgEl.style.width = '100%'; svgEl.style.height = '100%'; svgEl.style.display = 'block';
     const svg = d3.select(svgEl);
 
     // reference label
     svg.append('text').attr('x', W - 2).attr('y', 13).attr('text-anchor', 'end')
       .style('font-size','8px').style('font-family', FONT_LIGHT).style('fill','var(--grey-700)')
-      .text('○ = ' + reference + '%');
+      .text('○ = max ' + reference.toFixed(1));
 
     sorted.forEach((d, i) => {
       const isPrimary = d.name === primary;
       const cx = slotW * i + slotW / 2;
-      const rInner = Math.max(R * Math.sqrt(d.value / reference), 2.5);
+      const rInner = Math.min(R * 0.97, Math.max(R * Math.sqrt(d.value / reference), 2.5));
       const col = isPrimary ? D.primary : D.comp;
 
       // outer circle
@@ -1832,24 +1864,26 @@
 
   // ─── PROGRESS RING ────────────────────────────────────────────────────────
   function renderProgressRing(el, data, primary, D) {
-    const W = el.offsetWidth || 500, H = el.offsetHeight || 300;
+    const { width: W, height: H } = el.getBoundingClientRect();
+    if (!W || !H) return;
     if (H < 120) { showTooSmall(el); return; }
     if (!data || !data.length) { showEmpty(el); return; }
 
-    const reference = 100;
+    const reference = d3.max(data, d => d.value);
     const sorted = [
       ...data.filter(d => d.name === primary),
       ...[...data.filter(d => d.name !== primary)].sort((a,b) => b.value - a.value),
     ];
     const n = sorted.length;
     const slotW = W / n;
-    const R = Math.min(52, slotW / 2 - 10);
+    const R = Math.min(52, slotW / 2 - 10, (H - 40) / 2);
     const sw = Math.max(8, R * 0.22);
-    const cy = R + 14;
-    const svgH = R * 2 + 50;
+    const cy = H * 0.44;
+    const svgH = H;
 
     const svgEl = document.createElementNS('http://www.w3.org/2000/svg','svg');
-    svgEl.setAttribute('width', W); svgEl.setAttribute('height', svgH);
+    svgEl.setAttribute('viewBox', `0 0 ${W} ${svgH}`);
+    svgEl.style.width = '100%'; svgEl.style.height = '100%'; svgEl.style.display = 'block';
     const svg = d3.select(svgEl);
 
     const arcTrack = d3.arc().innerRadius(R - sw).outerRadius(R)
@@ -1860,7 +1894,7 @@
       const isPrimary = d.name === primary;
       const cx = slotW * i + slotW / 2;
       const col = isPrimary ? D.primary : D.comp;
-      const endAngle = -Math.PI / 2 + (d.value / reference) * 2 * Math.PI;
+      const endAngle = -Math.PI / 2 + Math.min(1, d.value / reference) * 2 * Math.PI;
 
       const g = svg.append('g').attr('transform', 'translate(' + cx + ',' + cy + ')');
 
@@ -1897,13 +1931,16 @@
 
   // ─── WAFFLE CHART ─────────────────────────────────────────────────────────
   function renderWaffle(el, data, primary, D) {
-    const W = el.offsetWidth || 500, H = el.offsetHeight || 300;
+    const { width: W, height: H } = el.getBoundingClientRect();
+    if (!W || !H) return;
     if (H < 120) { showTooSmall(el); return; }
     if (!data || !data.length) { showEmpty(el); return; }
 
-    const step = 8, r = 3, cols = 10, rows = 10;
+    const step = Math.max(5, Math.floor((H - 24) / 10));
+    const r = Math.max(2, step * 0.38);
+    const cols = 10, rows = 10;
     const blockW = cols * step - 2, blockH = rows * step - 2;
-    const svgH = blockH + 22;
+    const svgH = H;
 
     const sorted = [
       ...data.filter(d => d.name === primary),
@@ -1913,7 +1950,8 @@
     const brandGap = Math.max(10, (W - n * blockW) / Math.max(n - 1, 1));
 
     const svgEl = document.createElementNS('http://www.w3.org/2000/svg','svg');
-    svgEl.setAttribute('width', W); svgEl.setAttribute('height', svgH);
+    svgEl.setAttribute('viewBox', `0 0 ${W} ${svgH}`);
+    svgEl.style.width = '100%'; svgEl.style.height = '100%'; svgEl.style.display = 'block';
     const svg = d3.select(svgEl);
 
     sorted.forEach((d, bi) => {
@@ -1939,7 +1977,7 @@
       }
 
       // brand label
-      svg.append('text').attr('x', bx + blockW / 2).attr('y', blockH + 16)
+      svg.append('text').attr('x', bx + blockW / 2).attr('y', blockH + Math.min(16, H - blockH - 2))
         .attr('text-anchor', 'middle')
         .style('font-size', isPrimary ? '10px' : '9px').style('font-family', FONT_LIGHT)
         .style('text-transform','uppercase').style('fill', col).attr('data-brand', d.name)
@@ -1952,7 +1990,8 @@
 
   // ─── HORIZONTAL BAR ───────────────────────────────────────────────────────
   function renderHBar(el, data, primary, dashboard, D) {
-    const W = el.offsetWidth || 500, H = el.offsetHeight || 300;
+    const { width: W, height: H } = el.getBoundingClientRect();
+    if (!W || !H) return;
     if (H < 120) { showTooSmall(el); return; }
     if (!data || !data.length) { showEmpty(el); return; }
 
@@ -1970,7 +2009,8 @@
     const x = d3.scaleLinear().domain([0, d3.max(sorted, d => d.value) * 1.1]).range([0, iW]);
 
     const svgEl = document.createElementNS('http://www.w3.org/2000/svg','svg');
-    svgEl.setAttribute('width', W); svgEl.setAttribute('height', H);
+    svgEl.setAttribute('viewBox', `0 0 ${W} ${H}`);
+    svgEl.style.width = '100%'; svgEl.style.height = '100%'; svgEl.style.display = 'block';
     const g = d3.select(svgEl).append('g').attr('transform', 'translate(' + mL + ',' + mT + ')');
 
     // x-axis gridlines
@@ -2008,7 +2048,7 @@
       g.append('text').attr('x', -8).attr('y', rowY + band.bandwidth() / 2 + 4)
         .attr('text-anchor','end')
         .style('font-size', isPrimary ? '10px' : '9px').style('font-family', FONT_LIGHT)
-        .style('text-transform','uppercase').style('fill', col).text(d.name);
+        .style('text-transform','uppercase').style('fill', col).text(truncLabel(d.name, W));
 
       // value label (fades in after bars)
       g.append('text').attr('x', x(d.value) + 8).attr('y', rowY + band.bandwidth() / 2 + 4)
@@ -2023,9 +2063,11 @@
 
   // ─── VERTICAL BAR STACKED ─────────────────────────────────────────────────
   function renderVBarStacked(el, data, primary, D) {
-    const W = el.offsetWidth || 500, H = el.offsetHeight || 300;
+    const { width: W, height: H } = el.getBoundingClientRect();
+    if (!W || !H) return;
     if (H < 120) { showTooSmall(el); return; }
     if (!data || !data.length) { showEmpty(el); return; }
+    if (data[0].active == null) { showEmpty(el); return; }
 
     const mT = 10, mR = 8, mB = 26, mL = 30;
     const iW = W - mL - mR, iH = H - mT - mB;
@@ -2035,7 +2077,8 @@
     const y = d3.scaleLinear().domain([0, 1]).range([iH, 0]);
 
     const svgEl = document.createElementNS('http://www.w3.org/2000/svg','svg');
-    svgEl.setAttribute('width', W); svgEl.setAttribute('height', H);
+    svgEl.setAttribute('viewBox', `0 0 ${W} ${H}`);
+    svgEl.style.width = '100%'; svgEl.style.height = '100%'; svgEl.style.display = 'block';
     const g = d3.select(svgEl).append('g').attr('transform', 'translate(' + mL + ',' + mT + ')');
 
     // y-axis
@@ -2090,7 +2133,8 @@
 
   // ─── SCALE · FIGMA ────────────────────────────────────────────────────────
   function renderScaleFigma(el, data, primary, D) {
-    const W = el.offsetWidth || 500, H = el.offsetHeight || 300;
+    const { width: W, height: H } = el.getBoundingClientRect();
+    if (!W || !H) return;
     if (H < 120) { showTooSmall(el); return; }
     if (!data || !data.length) { showEmpty(el); return; }
 
@@ -2108,7 +2152,7 @@
     const xScale = d3.scaleLinear().domain(domain).range([0, trackW]);
 
     el.style.padding = '8px 0';
-    el.style.overflowY = 'auto';
+    el.style.overflow = 'hidden';
 
     sorted.forEach((d, i) => {
       const isPrimary = d.name === primary;
@@ -2179,7 +2223,8 @@
 
   // ─── MULTI-SCALE DOTS ────────────────────────────────────────────────────
   function renderMultiScale(el, data, primary, D) {
-    const W = el.offsetWidth || 500, H = el.offsetHeight || 300;
+    const { width: W, height: H } = el.getBoundingClientRect();
+    if (!W || !H) return;
     if (H < 120) { showTooSmall(el); return; }
     if (!guardBaAttributes(data)) {
       el.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;' +
@@ -2190,9 +2235,9 @@
 
     const attrs = ['Trust','Innovation','Value','Style','Heritage'];
     const mT = 30, mR = 12, mB = 12, mL = 88;
-    const ROW = 28;
+    const ROW = Math.min(28, Math.floor((H - mT - mB) / data.length));
     const iW = W - mL - mR;
-    const svgH = data.length * ROW + mT + mB;
+    const svgH = H;
 
     const sorted = [
       ...data.filter(d => d.name === primary),
@@ -2204,7 +2249,8 @@
     const x = d3.scaleLinear().domain([d3.min(allVals) * 0.95, d3.max(allVals) * 1.05]).range([0, iW]);
 
     const svgEl = document.createElementNS('http://www.w3.org/2000/svg','svg');
-    svgEl.setAttribute('width', W); svgEl.setAttribute('height', svgH);
+    svgEl.setAttribute('viewBox', `0 0 ${W} ${svgH}`);
+    svgEl.style.width = '100%'; svgEl.style.height = '100%'; svgEl.style.display = 'block';
     const g = d3.select(svgEl).append('g').attr('transform', 'translate(' + mL + ',' + mT + ')');
 
     // column headers above primary row
@@ -2247,7 +2293,7 @@
       g.append('text').attr('x', -8).attr('y', cy + 4).attr('text-anchor','end')
         .style('font-size', isPrimary ? '10px' : '9px').style('font-family', FONT_LIGHT)
         .style('text-transform','uppercase').style('fill', col).attr('data-brand', d.name)
-        .text(d.name);
+        .text(truncLabel(d.name, W));
     });
 
     // x-axis
@@ -2264,13 +2310,14 @@
 
   // ─── DOT MATRIX ───────────────────────────────────────────────────────────
   function renderDotMatrix(el, data, primary, D) {
-    const W = el.offsetWidth || 500, H = el.offsetHeight || 300;
+    const { width: W, height: H } = el.getBoundingClientRect();
+    if (!W || !H) return;
     if (H < 120) { showTooSmall(el); return; }
     if (!data || !data.length) { showEmpty(el); return; }
 
-    const step = 7, r = 2.5, cols = 10;
-    const blockW = cols * step - 2, blockH = cols * step - 2;
-    const svgH = blockH + 22;
+    const step = 7, r = 2.5, cols = 10, rows = 10;
+    const blockW = cols * step - 2, blockH = rows * step - 2;
+    const svgH = H;
 
     const sorted = [
       ...data.filter(d => d.name === primary),
@@ -2280,7 +2327,8 @@
     const brandGap = Math.max(8, (W - n * blockW) / Math.max(n - 1, 1));
 
     const svgEl = document.createElementNS('http://www.w3.org/2000/svg','svg');
-    svgEl.setAttribute('width', W); svgEl.setAttribute('height', svgH);
+    svgEl.setAttribute('viewBox', `0 0 ${W} ${svgH}`);
+    svgEl.style.width = '100%'; svgEl.style.height = '100%'; svgEl.style.display = 'block';
     const svg = d3.select(svgEl);
 
     sorted.forEach((d, bi) => {
@@ -2319,7 +2367,8 @@
 
   // ─── SMALL MULTIPLES ──────────────────────────────────────────────────────
   function renderSmallMultiples(el, data, primary, D) {
-    const W = el.offsetWidth || 500, H = el.offsetHeight || 300;
+    const { width: W, height: H } = el.getBoundingClientRect();
+    if (!W || !H) return;
     if (H < 120) { showTooSmall(el); return; }
     if (!data || !data.length) { showEmpty(el); return; }
 
@@ -2327,9 +2376,9 @@
     const periods = data.map(d => d.period);
     const n = brands.length;
     const panelW = Math.floor(W / n);
-    const cellH = H < 220 ? 52 : 88;
     const labelH = 18;
-    const svgH = cellH + labelH;
+    const cellH = Math.max(32, H - labelH - 4);
+    const svgH = H;
     const iW = panelW - 8, iH = cellH - 4;
 
     const allVals = brands.flatMap(b => data.map(d => d[b] || 0));
@@ -2344,7 +2393,8 @@
     const sorted = sortWithPrimaryLast(brands.map(b => ({ name: b })), primary).map(d => d.name);
 
     const svgEl = document.createElementNS('http://www.w3.org/2000/svg','svg');
-    svgEl.setAttribute('width', W); svgEl.setAttribute('height', svgH);
+    svgEl.setAttribute('viewBox', `0 0 ${W} ${svgH}`);
+    svgEl.style.width = '100%'; svgEl.style.height = '100%'; svgEl.style.display = 'block';
     const svg = d3.select(svgEl);
 
     sorted.forEach((b, i) => {
@@ -2385,7 +2435,8 @@
 
   // ─── ARC (NPS CALLOUT) ────────────────────────────────────────────────────
   function renderArc(el, data, primary, D) {
-    const W = el.offsetWidth || 500, H = el.offsetHeight || 300;
+    const { width: W, height: H } = el.getBoundingClientRect();
+    if (!W || !H) return;
     if (H < 120) { showTooSmall(el); return; }
     if (!guardNpsRecalculated(data)) {
       el.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;' +
@@ -2397,7 +2448,9 @@
     const illyNps = data.illy ? data.illy.nps : 0;
     const competitors = data.competitors || [];
 
-    const cx = W * 0.40, cy = H * 0.85;
+    const showCompetitors = W >= 400;
+    const cx = showCompetitors ? W * 0.40 : W * 0.50;
+    const cy = H * 0.85;
     const R = Math.min(cx, cy * 0.70);
     const sw = Math.max(20, R * 0.18);
 
@@ -2406,7 +2459,8 @@
     const arcFill = d3.arc().innerRadius(R - sw).outerRadius(R).cornerRadius(sw / 2);
 
     const svgEl = document.createElementNS('http://www.w3.org/2000/svg','svg');
-    svgEl.setAttribute('width', W); svgEl.setAttribute('height', H);
+    svgEl.setAttribute('viewBox', `0 0 ${W} ${H}`);
+    svgEl.style.width = '100%'; svgEl.style.height = '100%'; svgEl.style.display = 'block';
     const svg = d3.select(svgEl);
 
     const g = svg.append('g').attr('transform', 'translate(' + cx + ',' + cy + ')');
@@ -2442,7 +2496,7 @@
       .style('fill','#808080').text('+100');
 
     // competitor list (right panel, only if wide enough)
-    if (W >= 400) {
+    if (showCompetitors) {
       const xOrig = W * 0.64, yOrig = cy - R * 0.65;
       competitors.forEach((c, i) => {
         const ry = yOrig + i * 22;
