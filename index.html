@@ -261,7 +261,7 @@
 
   <script>
   // ─── VERSION ──────────────────────────────────────────────────────────────
-  const VERSION = '2026-05-15.15';
+  const VERSION = '2026-05-16.1';
 
   // ─── FONTS ────────────────────────────────────────────────────────────────
   const FONT_TITLE = "'Baskervville', 'Baskerville', Georgia, serif";
@@ -403,6 +403,8 @@
   let _lastData       = null;
   let _lastSelected   = null;
   let _selectedBrand  = null;
+  let _allData        = null;
+  let _selectedPeriod = 'all';
   let CONFIG          = { ...DEFAULTS };
 
   // ─── APPLY BACKGROUND ─────────────────────────────────────────────────────
@@ -736,7 +738,8 @@
       applyBackground();
       overlay.remove();
 
-      _selectedBrand = null;
+      _selectedBrand  = null;
+      _selectedPeriod = 'all';
       if (_dashboard) {
         const worksheet = _dashboard.worksheets.find(ws => ws.name === CONFIG.worksheet);
         if (worksheet) await fetchAndRender(worksheet, _dashboard);
@@ -832,7 +835,7 @@
         return;
       }
 
-      let data = rows.map(row => {
+      _allData = rows.map(row => {
         const entry = {
           name:      row[brandIdx].formattedValue || row[brandIdx].value,
           value:     parseFloat(row[valueIdx].value) || 0,
@@ -843,34 +846,83 @@
       }).filter(d => d.value > 0)
         .filter(d => !CONFIG.metricId || d.indicator === CONFIG.metricId);
 
-      // For snapshot charts, reduce to the latest period in the data.
-      // Multi-period charts (line, area, stream, etc.) receive all periods unchanged.
-      const multiPeriodCharts = ['line','line-smooth','line-straight','area-100','small-multiples','stream','slope'];
-      if (!multiPeriodCharts.includes(CONFIG.chart)) {
-        const periods = [...new Set(data.map(d => d.period).filter(Boolean))];
-        if (periods.length > 1) {
-          const latest = periods[periods.length - 1];
-          data = data.filter(d => d.period === latest);
-        }
-      }
+      _selectedPeriod = 'all';
 
       if (!_selectedBrand) {
         const allParams = await dashboard.getParametersAsync();
         const param = allParams.find(p => p.name === CONFIG.parameter);
         if (param) {
           const raw = (param.currentValue.value || param.currentValue.formattedValue || '').trim();
-          const match = data.find(d => d.name.trim().toLowerCase() === raw.toLowerCase());
-          _selectedBrand = match ? match.name : (data[0] ? data[0].name : '');
+          const match = _allData.find(d => d.name.trim().toLowerCase() === raw.toLowerCase());
+          _selectedBrand = match ? match.name : (_allData[0] ? _allData[0].name : '');
         } else {
-          _selectedBrand = data[0] ? data[0].name : '';
+          _selectedBrand = _allData[0] ? _allData[0].name : '';
         }
-      } else if (!data.find(d => d.name === _selectedBrand)) {
-        _selectedBrand = data[0] ? data[0].name : null;
+      } else if (!_allData.find(d => d.name === _selectedBrand)) {
+        _selectedBrand = _allData[0] ? _allData[0].name : null;
       }
-      renderChart(data, _selectedBrand, dashboard);
+      renderWithPeriod();
     } catch(err) {
       showError('Data error: ' + err.message);
     }
+  }
+
+  // ─── PERIOD RENDER ────────────────────────────────────────────────────────
+  function renderWithPeriod() {
+    if (!_allData) {
+      if (_lastData) renderChart(_lastData, _lastSelected, _dashboard);
+      return;
+    }
+    const multiPeriodCharts = ['line','line-smooth','line-straight','area-100','small-multiples','stream','slope'];
+    let data;
+    if (_selectedPeriod === 'all') {
+      if (!multiPeriodCharts.includes(CONFIG.chart)) {
+        const periods = [...new Set(_allData.map(d => d.period).filter(Boolean))];
+        data = periods.length > 1 ? _allData.filter(d => d.period === periods[periods.length - 1]) : _allData;
+      } else {
+        data = _allData;
+      }
+    } else {
+      data = _allData.filter(d => d.period === _selectedPeriod);
+    }
+    renderChart(data, _lastSelected || (_allData[0] ? _allData[0].name : null), _dashboard);
+  }
+
+  // ─── PERIOD SELECTOR ─────────────────────────────────────────────────────
+  function injectPeriodSelector(el, H) {
+    const SNAPSHOT_CHARTS = ['ban','bans','bar','donut','hbar','scale-figma','waffle',
+      'bubbles','inset-bubble','progress-ring','treemap','treemap-bar',
+      'vbar-stacked','multiscale','dot-matrix','arc'];
+    if (!SNAPSHOT_CHARTS.includes(CONFIG.chart)) return;
+    if (!_allData || H < 160) return;
+    const periods = [...new Set(_allData.map(d => d.period).filter(Boolean))].sort();
+    if (periods.length <= 1) return;
+
+    const strip = document.createElement('div');
+    strip.style.cssText = 'display:flex;gap:4px;padding:4px 4px 6px 4px;justify-content:flex-end;flex-shrink:0;';
+
+    ['all'].concat(periods).forEach(function(p) {
+      const isSelected = _selectedPeriod === p;
+      const hasData = p === 'all' || _allData.some(function(d) { return d.period === p && d.value > 0; });
+      const btn = document.createElement('button');
+      btn.textContent = p === 'all' ? 'All' : p;
+      btn.style.cssText = [
+        'padding:2px 8px',
+        'border-radius:3px',
+        'border:1px solid ' + (isSelected ? 'transparent' : 'var(--grey-700)'),
+        'background:' + (isSelected ? 'var(--primary-500)' : 'var(--grey-800)'),
+        'color:' + (isSelected ? 'var(--grey-900)' : (hasData ? 'var(--grey-500)' : 'var(--grey-700)')),
+        'font-size:9px',
+        'font-family:' + FONT_LIGHT,
+        'letter-spacing:0.05em',
+        'text-transform:uppercase',
+        'cursor:' + (hasData ? 'pointer' : 'default'),
+        'opacity:' + (hasData ? '1' : '0.4'),
+      ].join(';');
+      if (hasData) btn.onclick = function() { _selectedPeriod = p; renderWithPeriod(); };
+      strip.appendChild(btn);
+    });
+    el.appendChild(strip);
   }
 
   // ─── ROUTER ───────────────────────────────────────────────────────────────
@@ -878,9 +930,19 @@
     _lastData     = data;
     _lastSelected = selectedBrand;
 
-    const el = document.getElementById('chart');
-    el.innerHTML = '';
-    el.removeAttribute('style');
+    const outer = document.getElementById('chart');
+    outer.innerHTML = '';
+    outer.removeAttribute('style');
+    outer.style.display       = 'flex';
+    outer.style.flexDirection = 'column';
+    outer.style.height        = '100%';
+
+    const { height: H } = outer.getBoundingClientRect();
+    injectPeriodSelector(outer, H);
+
+    const el = document.createElement('div');
+    el.style.cssText = 'flex:1;min-height:0;overflow:hidden;';
+    outer.appendChild(el);
 
     const D = buildDesign();
 
@@ -2524,9 +2586,7 @@
   let _resizeTimer;
   const resizeObserver = new ResizeObserver(() => {
     clearTimeout(_resizeTimer);
-    _resizeTimer = setTimeout(() => {
-      if (_lastData) renderChart(_lastData, _lastSelected, _dashboard);
-    }, 150);
+    _resizeTimer = setTimeout(renderWithPeriod, 150);
   });
   resizeObserver.observe(document.getElementById('chart'));
 
