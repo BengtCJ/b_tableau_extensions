@@ -67,7 +67,7 @@
       border: 1px solid #444;
       border-radius: 8px;
       padding: 20px;
-      width: 480px;
+      width: 680px;
       max-width: 95vw;
       color: #e6e6e6;
       font-family: 'Tableau Light', Georgia, serif;
@@ -94,7 +94,7 @@
 
     .fields-grid {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: 1fr 1fr 1fr;
       gap: 10px 16px;
     }
 
@@ -211,7 +211,7 @@
 
     .fields-grid-advanced {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: 1fr 1fr 1fr;
       gap: 10px 16px;
       margin-top: 10px;
     }
@@ -261,7 +261,7 @@
 
   <script>
   // ─── VERSION ──────────────────────────────────────────────────────────────
-  const VERSION = '2026-05-15.10';
+  const VERSION = '2026-05-15.11';
 
   // ─── FONTS ────────────────────────────────────────────────────────────────
   const FONT_TITLE = "'Baskervville', 'Baskerville', Georgia, serif";
@@ -549,10 +549,10 @@
         <datalist id="s-columns">${colOptions}</datalist>
         <div class="fields-grid">
 
-          <div class="field field-full">
+          <div class="field">
             <label>Metric</label>
             <input id="s-metric" type="text" value="${CONFIG.metricId}" list="s-metric-ids"
-              placeholder="e.g. bss, nps, sov — filters chart list">
+              placeholder="e.g. bss, nps, sov">
             <datalist id="s-metric-ids">
               <option value="tam"><option value="cagr"><option value="svt">
               <option value="sop"><option value="cra"><option value="bss">
@@ -563,7 +563,7 @@
             <div id="s-chart-metric-hint" class="hint" style="color:#e994a2"></div>
           </div>
 
-          <div class="field field-full">
+          <div class="field">
             <label>Chart</label>
             <select id="s-chart">
               <option value="donut"          ${CONFIG.chart==='donut'          ?'selected':''}>Donut</option>
@@ -592,7 +592,7 @@
             </select>
           </div>
 
-          <div class="field field-full">
+          <div class="field">
             <label>Worksheet</label>
             <select id="s-worksheet">${worksheetOptions}</select>
           </div>
@@ -607,7 +607,7 @@
             <input id="s-neutralColor" type="color" value="${CONFIG.neutralColor}">
           </div>
 
-          <div class="field field-full">
+          <div class="field">
             <label>Background</label>
             <div class="inline-controls">
               <input id="s-bgColor" type="color" value="${bgColorValue}" ${isTransparent ? 'disabled' : ''} style="${isTransparent ? 'opacity:0.4' : ''}">
@@ -639,6 +639,7 @@
             </div>
           </details>
 
+          <div></div>
           <button class="btn btn-secondary" id="s-cancel">Cancel</button>
           <button class="btn btn-primary" id="s-save">Save & Render</button>
 
