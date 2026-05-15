@@ -217,7 +217,7 @@
 
   <script>
   // ─── VERSION ──────────────────────────────────────────────────────────────
-  const VERSION = '2026-05-15.6';
+  const VERSION = '2026-05-15.7';
 
   // ─── FONTS ────────────────────────────────────────────────────────────────
   const FONT_TITLE = "'Baskervville', 'Baskerville', Georgia, serif";
@@ -508,7 +508,7 @@
           <div class="field">
             <label>Metric / Indicator ID</label>
             <input id="s-metric" type="text" value="${CONFIG.metricId}" list="s-metric-ids"
-              placeholder="e.g. bss, nps, sov — filters chart list">
+              placeholder="e.g. bss, nps, sov — filters chart list and data rows">
             <datalist id="s-metric-ids">
               <option value="tam"><option value="cagr"><option value="svt">
               <option value="sop"><option value="cra"><option value="bss">
@@ -768,9 +768,10 @@
       const cols = dataTable.columns;
       const rows = dataTable.data;
 
-      const brandIdx  = cols.findIndex(c => c.fieldName === CONFIG.brandField);
-      const valueIdx  = cols.findIndex(c => c.fieldName === CONFIG.valueField);
-      const periodIdx = cols.findIndex(c => c.fieldName === CONFIG.periodField);
+      const brandIdx     = cols.findIndex(c => c.fieldName === CONFIG.brandField);
+      const valueIdx     = cols.findIndex(c => c.fieldName === CONFIG.valueField);
+      const periodIdx    = cols.findIndex(c => c.fieldName === CONFIG.periodField);
+      const indicatorIdx = cols.findIndex(c => c.fieldName === 'indicator_id');
 
       if (brandIdx === -1 || valueIdx === -1) {
         const available = cols.map(c => c.fieldName).join(', ');
@@ -778,14 +779,14 @@
         return;
       }
 
-      const data = rows.map(row => {
-        const entry = {
-          name:  row[brandIdx].formattedValue || row[brandIdx].value,
-          value: parseFloat(row[valueIdx].value) || 0,
-        };
-        if (periodIdx !== -1) entry.period = row[periodIdx].formattedValue || row[periodIdx].value;
-        return entry;
-      }).filter(d => d.value > 0);
+      const data = rows.map(row => ({
+        name:      row[brandIdx].formattedValue || row[brandIdx].value,
+        value:     parseFloat(row[valueIdx].value) || 0,
+        period:    periodIdx     !== -1 ? (row[periodIdx].formattedValue     || row[periodIdx].value)     : null,
+        indicator: indicatorIdx  !== -1 ? row[indicatorIdx].value : null,
+      }))
+      .filter(d => d.value > 0)
+      .filter(d => !CONFIG.metricId || d.indicator === CONFIG.metricId);
 
       if (!_selectedBrand) {
         const allParams = await dashboard.getParametersAsync();
