@@ -261,7 +261,7 @@
 
   <script>
   // ─── VERSION ──────────────────────────────────────────────────────────────
-  const VERSION = '2026-05-16.2';
+  const VERSION = '2026-05-16.3';
 
   // ─── FONTS ────────────────────────────────────────────────────────────────
   const FONT_TITLE = "'Baskervville', 'Baskerville', Georgia, serif";
@@ -277,21 +277,21 @@
   // ─── METRIC → CHART MAPPING ───────────────────────────────────────────────
   // First chart in each array = recommended (primary). Others = alternatives.
   const METRIC_CHARTS = {
-    tam:   ['ban'],
-    cagr:  ['ban'],
-    svt:   ['line-straight', 'line-smooth', 'small-multiples'],
-    sop:   ['scale-figma', 'slope'],
-    cra:   ['hbar'],
-    bss:   ['area-100', 'treemap-bar', 'slope', 'stream', 'bubbles', 'small-multiples'],
-    dvtr:  ['bans', 'hbar', 'scale-figma'],
-    sstsr: ['hbar'],
-    eqr:   ['vbar-stacked', 'inset-bubble', 'progress-ring', 'waffle'],
-    sov:   ['area-100', 'treemap-bar', 'bubbles', 'inset-bubble', 'stream', 'small-multiples'],
-    vom:   ['line-smooth', 'line-straight'],
-    nps:   ['waffle', 'dot-matrix', 'inset-bubble', 'arc', 'bans'],
-    ba:    ['multiscale'],
-    ebl:   ['vbar-stacked', 'inset-bubble'],
-    bt:    ['scale-figma', 'bans'],
+    tam:   ['ban', 'hbar', 'bans', 'slope'],
+    cagr:  ['ban', 'hbar', 'bans', 'slope'],
+    svt:   ['line-smooth', 'line-straight', 'area-100', 'small-multiples', 'stream'],
+    sop:   ['hbar', 'bar', 'scale-figma', 'slope'],
+    cra:   ['hbar', 'bar', 'scale-figma', 'progress-ring'],
+    bss:   ['hbar', 'bar', 'area-100', 'scale-figma', 'treemap-bar', 'slope', 'stream', 'bubbles'],
+    dvtr:  ['hbar', 'bar', 'scale-figma', 'bans', 'waffle', 'dot-matrix'],
+    sstsr: ['hbar', 'bar', 'scale-figma', 'progress-ring'],
+    eqr:   ['hbar', 'bar', 'scale-figma', 'progress-ring', 'waffle', 'vbar-stacked'],
+    sov:   ['hbar', 'bar', 'area-100', 'scale-figma', 'treemap-bar', 'bubbles', 'inset-bubble', 'stream'],
+    vom:   ['line-smooth', 'line-straight', 'small-multiples', 'slope'],
+    nps:   ['hbar', 'bans', 'scale-figma', 'waffle', 'dot-matrix', 'arc', 'inset-bubble'],
+    ba:    ['hbar', 'bar', 'scale-figma', 'multiscale'],
+    ebl:   ['hbar', 'bar', 'scale-figma', 'vbar-stacked', 'inset-bubble', 'progress-ring'],
+    bt:    ['hbar', 'bar', 'scale-figma', 'bans', 'progress-ring', 'waffle'],
   };
 
   // ─── DESIGN SYSTEM ────────────────────────────────────────────────────────
@@ -372,15 +372,13 @@
       'color:var(--grey-700)">No data available</div>';
   }
 
-  function applySelectionOpacity(svgEl, selected) {
+  function applySelectionOpacity(svgEl) {
     d3.select(svgEl).selectAll('[data-brand]')
       .transition().duration(180).ease(d3.easeCubicOut)
       .attr('opacity', function() {
         const b = this.getAttribute('data-brand');
-        if (!selected) return 1;
-        if (b === selected) return 1;
-        if (b === _lastSelected) return 0.35;
-        return 0.2;
+        if (!_highlightedBrand) return 1;
+        return b === _highlightedBrand ? 1 : 0.2;
       });
   }
 
@@ -399,13 +397,13 @@
   };
 
   // ─── STATE ────────────────────────────────────────────────────────────────
-  let _dashboard      = null;
-  let _lastData       = null;
-  let _lastSelected   = null;
-  let _selectedBrand  = null;
-  let _allData        = null;
-  let _selectedPeriod = 'all';
-  let CONFIG          = { ...DEFAULTS };
+  let _dashboard        = null;
+  let _lastData         = null;
+  let _highlightedBrand = null;
+  let _selectedBrand    = null;
+  let _allData          = null;
+  let _selectedPeriod   = 'all';
+  let CONFIG            = { ...DEFAULTS };
 
   // ─── APPLY BACKGROUND ─────────────────────────────────────────────────────
   function applyBackground() {
@@ -545,8 +543,9 @@
     const overlay = document.createElement('div');
     overlay.id = 'settings-overlay';
 
-    const isTransparent = CONFIG.bgColor === 'transparent';
-    const bgColorValue  = isTransparent ? '#333333' : CONFIG.bgColor;
+    const isTransparent   = CONFIG.bgColor === 'transparent';
+    const bgColorValue    = isTransparent ? '#333333' : CONFIG.bgColor;
+    const effectiveMetric = _dashboard ? detectMetricId(_dashboard) : CONFIG.metricId;
 
     const worksheetOptions = worksheets
       ? worksheets.map(ws => `<option value="${ws}" ${ws === CONFIG.worksheet ? 'selected' : ''}>${ws}</option>`).join('')
@@ -562,44 +561,50 @@
 
           <div class="field">
             <label>Metric</label>
-            <input id="s-metric" type="text" value="${CONFIG.metricId}" list="s-metric-ids"
-              placeholder="e.g. bss, nps, sov">
-            <datalist id="s-metric-ids">
-              <option value="tam"><option value="cagr"><option value="svt">
-              <option value="sop"><option value="cra"><option value="bss">
-              <option value="dvtr"><option value="sstsr"><option value="eqr">
-              <option value="sov"><option value="vom"><option value="nps">
-              <option value="ba"><option value="ebl"><option value="bt">
-            </datalist>
+            ${_dashboard
+              ? `<div style="padding:6px 8px;border-radius:4px;background:var(--grey-800);color:var(--grey-400);font-size:11px;font-family:'Tableau Light',Arial,sans-serif;">${effectiveMetric || '—'}<div class="hint" style="margin-top:2px;">Auto-detected from dashboard name</div></div>`
+              : `<input id="s-metric" type="text" value="${CONFIG.metricId}" list="s-metric-ids" placeholder="e.g. bss, nps, sov">
+                 <datalist id="s-metric-ids">
+                   <option value="tam"><option value="cagr"><option value="svt">
+                   <option value="sop"><option value="cra"><option value="bss">
+                   <option value="dvtr"><option value="sstsr"><option value="eqr">
+                   <option value="sov"><option value="vom"><option value="nps">
+                   <option value="ba"><option value="ebl"><option value="bt">
+                 </datalist>`
+            }
             <div id="s-chart-metric-hint" class="hint" style="color:#e994a2"></div>
           </div>
 
           <div class="field">
             <label>Chart</label>
             <select id="s-chart">
-              <option value="donut"          ${CONFIG.chart==='donut'          ?'selected':''}>Donut</option>
-              <option value="bar"            ${CONFIG.chart==='bar'            ?'selected':''}>Bar</option>
-              <option value="line"           ${CONFIG.chart==='line'           ?'selected':''}>Line</option>
-              <option value="ban"            ${CONFIG.chart==='ban'            ?'selected':''}>BAN (Headline Number)</option>
-              <option value="bans"           ${CONFIG.chart==='bans'           ?'selected':''}>BANs (Multi-brand headline)</option>
-              <option value="line-straight"  ${CONFIG.chart==='line-straight'  ?'selected':''}>Line — Straight</option>
-              <option value="line-smooth"    ${CONFIG.chart==='line-smooth'    ?'selected':''}>Line — Smooth</option>
-              <option value="slope"          ${CONFIG.chart==='slope'          ?'selected':''}>Slope chart</option>
-              <option value="area-100"       ${CONFIG.chart==='area-100'       ?'selected':''}>Stacked 100% Area</option>
-              <option value="stream"         ${CONFIG.chart==='stream'         ?'selected':''}>Stream graph</option>
-              <option value="treemap"        ${CONFIG.chart==='treemap'        ?'selected':''}>Treemap</option>
-              <option value="treemap-bar"    ${CONFIG.chart==='treemap-bar'    ?'selected':''}>Treemap bar</option>
-              <option value="bubbles"        ${CONFIG.chart==='bubbles'        ?'selected':''}>Bubbles</option>
-              <option value="inset-bubble"   ${CONFIG.chart==='inset-bubble'   ?'selected':''}>Inset bubble</option>
-              <option value="progress-ring"  ${CONFIG.chart==='progress-ring'  ?'selected':''}>Progress ring</option>
-              <option value="waffle"         ${CONFIG.chart==='waffle'         ?'selected':''}>Waffle chart</option>
-              <option value="hbar"           ${CONFIG.chart==='hbar'           ?'selected':''}>Horizontal bar</option>
-              <option value="vbar-stacked"   ${CONFIG.chart==='vbar-stacked'   ?'selected':''}>Vertical bar stacked</option>
-              <option value="scale-figma"    ${CONFIG.chart==='scale-figma'    ?'selected':''}>Scale · Figma</option>
-              <option value="multiscale"     ${CONFIG.chart==='multiscale'     ?'selected':''}>Multi-scale dots</option>
-              <option value="dot-matrix"     ${CONFIG.chart==='dot-matrix'     ?'selected':''}>Dot matrix</option>
-              <option value="small-multiples"${CONFIG.chart==='small-multiples'?'selected':''}>Small multiples</option>
-              <option value="arc"            ${CONFIG.chart==='arc'            ?'selected':''}>Arc (NPS callout)</option>
+              <optgroup label="Classic">
+                <option value="donut"          ${CONFIG.chart==='donut'          ?'selected':''}>Donut</option>
+                <option value="bar"            ${CONFIG.chart==='bar'            ?'selected':''}>Bar</option>
+                <option value="line"           ${CONFIG.chart==='line'           ?'selected':''}>Line</option>
+                <option value="ban"            ${CONFIG.chart==='ban'            ?'selected':''}>BAN (Headline Number)</option>
+                <option value="bans"           ${CONFIG.chart==='bans'           ?'selected':''}>BANs (Multi-brand headline)</option>
+                <option value="line-straight"  ${CONFIG.chart==='line-straight'  ?'selected':''}>Line — Straight</option>
+                <option value="line-smooth"    ${CONFIG.chart==='line-smooth'    ?'selected':''}>Line — Smooth</option>
+                <option value="slope"          ${CONFIG.chart==='slope'          ?'selected':''}>Slope chart</option>
+              </optgroup>
+              <optgroup label="Specialist">
+                <option value="hbar"           ${CONFIG.chart==='hbar'           ?'selected':''}>Horizontal bar</option>
+                <option value="area-100"       ${CONFIG.chart==='area-100'       ?'selected':''}>Stacked 100% Area</option>
+                <option value="stream"         ${CONFIG.chart==='stream'         ?'selected':''}>Stream graph</option>
+                <option value="treemap"        ${CONFIG.chart==='treemap'        ?'selected':''}>Treemap</option>
+                <option value="treemap-bar"    ${CONFIG.chart==='treemap-bar'    ?'selected':''}>Treemap bar</option>
+                <option value="bubbles"        ${CONFIG.chart==='bubbles'        ?'selected':''}>Bubbles</option>
+                <option value="inset-bubble"   ${CONFIG.chart==='inset-bubble'   ?'selected':''}>Inset bubble</option>
+                <option value="progress-ring"  ${CONFIG.chart==='progress-ring'  ?'selected':''}>Progress ring</option>
+                <option value="waffle"         ${CONFIG.chart==='waffle'         ?'selected':''}>Waffle chart</option>
+                <option value="vbar-stacked"   ${CONFIG.chart==='vbar-stacked'   ?'selected':''}>Vertical bar stacked</option>
+                <option value="scale-figma"    ${CONFIG.chart==='scale-figma'    ?'selected':''}>Scale · Figma</option>
+                <option value="multiscale"     ${CONFIG.chart==='multiscale'     ?'selected':''}>Multi-scale dots</option>
+                <option value="dot-matrix"     ${CONFIG.chart==='dot-matrix'     ?'selected':''}>Dot matrix</option>
+                <option value="small-multiples"${CONFIG.chart==='small-multiples'?'selected':''}>Small multiples</option>
+                <option value="arc"            ${CONFIG.chart==='arc'            ?'selected':''}>Arc (NPS callout)</option>
+              </optgroup>
             </select>
           </div>
 
@@ -666,6 +671,7 @@
       const chartSelect = document.getElementById('s-chart');
       const hint        = document.getElementById('s-chart-metric-hint');
       const LABELS = {
+        'donut':'Donut','bar':'Bar','line':'Line',
         'ban':'BAN','bans':'BANs','line-straight':'Line Straight',
         'line-smooth':'Line Smooth','slope':'Slope','area-100':'Stacked Area',
         'stream':'Stream','treemap':'Treemap','treemap-bar':'Treemap Bar',
@@ -676,13 +682,17 @@
       };
       function filter(id) {
         const charts = METRIC_CHARTS[id.trim().toLowerCase()];
-        Array.from(chartSelect.options).forEach(opt => {
+        Array.from(chartSelect.options).forEach(function(opt) {
           opt.hidden = charts ? !charts.includes(opt.value) : false;
+        });
+        Array.from(chartSelect.querySelectorAll('optgroup')).forEach(function(og) {
+          og.hidden = Array.from(og.querySelectorAll('option')).every(function(o) { return o.hidden; });
         });
         if (charts) {
           hint.textContent = '★ Recommended: ' + (LABELS[charts[0]] || charts[0]);
+          hint.style.color = '#e994a2';
           if (chartSelect.selectedOptions.length && chartSelect.selectedOptions[0].hidden) {
-            const first = Array.from(chartSelect.options).find(o => !o.hidden);
+            const first = Array.from(chartSelect.options).find(function(o) { return !o.hidden; });
             if (first) chartSelect.value = first.value;
           }
         } else {
@@ -690,28 +700,8 @@
           hint.style.color = id.trim() ? '#666' : '#e994a2';
         }
       }
-      metricInput.addEventListener('input', () => filter(metricInput.value));
-      filter(metricInput.value);
-    })();
-
-    // Worksheet name → metric ID auto-detect
-    (function() {
-      const KNOWN_METRICS = ['tam','cagr','svt','sop','cra','bss','dvtr','sstsr','eqr','sov','vom','nps','ba','ebl','bt'];
-      function detectMetric(name) {
-        const words = name.toLowerCase().replace(/[^a-z0-9]/g, ' ').split(/\s+/);
-        return KNOWN_METRICS.find(function(m) { return words.indexOf(m) !== -1; }) || '';
-      }
-      function tryAutoFill(wsName) {
-        var metricInput = document.getElementById('s-metric');
-        if (metricInput.value.trim()) return;
-        var detected = detectMetric(wsName);
-        if (detected) {
-          metricInput.value = detected;
-          metricInput.dispatchEvent(new Event('input'));
-        }
-      }
-      tryAutoFill(document.getElementById('s-worksheet').value);
-      document.getElementById('s-worksheet').addEventListener('change', function() { tryAutoFill(this.value); });
+      if (metricInput) metricInput.addEventListener('input', function() { filter(metricInput.value); });
+      filter(effectiveMetric);
     })();
 
     // Reload column suggestions when worksheet changes
@@ -732,7 +722,9 @@
 
     document.getElementById('s-save').onclick = async () => {
       CONFIG.chart         = document.getElementById('s-chart').value;
-      CONFIG.metricId      = document.getElementById('s-metric').value.trim().toLowerCase();
+      CONFIG.metricId = _dashboard
+        ? detectMetricId(_dashboard)
+        : (document.getElementById('s-metric') ? document.getElementById('s-metric').value.trim().toLowerCase() : '');
       CONFIG.worksheet     = document.getElementById('s-worksheet').value;
       CONFIG.brandField    = document.getElementById('s-brandField').value;
       CONFIG.valueField    = document.getElementById('s-valueField').value;
@@ -774,6 +766,11 @@
     await showSettings(worksheets);
   };
 
+  // ─── METRIC FROM DASHBOARD NAME ───────────────────────────────────────────
+  function detectMetricId(dashboard) {
+    return dashboard ? dashboard.name.trim().toLowerCase() : '';
+  }
+
   // ─── LOAD TABLEAU API ─────────────────────────────────────────────────────
   function loadTableauAPI() {
     return Promise.resolve();
@@ -800,6 +797,7 @@
         const val = settings.get(k);
         if (val) CONFIG[k] = val;
       });
+      CONFIG.metricId = detectMetricId(_dashboard);
 
       console.log('Loaded CONFIG:', JSON.stringify(CONFIG));
       console.log('All settings:', JSON.stringify(settings.getAll()));
@@ -866,7 +864,8 @@
       }).filter(d => d.value > 0)
         .filter(d => !CONFIG.metricId || d.indicator === CONFIG.metricId);
 
-      _selectedPeriod = 'all';
+      _selectedPeriod   = 'all';
+      _highlightedBrand = null;
 
       if (!_selectedBrand) {
         const allParams = await dashboard.getParametersAsync();
@@ -890,7 +889,7 @@
   // ─── PERIOD RENDER ────────────────────────────────────────────────────────
   function renderWithPeriod() {
     if (!_allData) {
-      if (_lastData) renderChart(_lastData, _lastSelected, _dashboard);
+      if (_lastData) renderChart(_lastData, _selectedBrand, _dashboard);
       return;
     }
     const multiPeriodCharts = ['line','line-smooth','line-straight','area-100','small-multiples','stream','slope'];
@@ -905,7 +904,7 @@
     } else {
       data = _allData.filter(d => d.period === _selectedPeriod);
     }
-    renderChart(data, _lastSelected || (_allData[0] ? _allData[0].name : null), _dashboard);
+    renderChart(data, _selectedBrand || (_allData[0] ? _allData[0].name : null), _dashboard);
   }
 
   // ─── PERIOD SELECTOR ─────────────────────────────────────────────────────
@@ -947,8 +946,7 @@
 
   // ─── ROUTER ───────────────────────────────────────────────────────────────
   function renderChart(data, selectedBrand, dashboard) {
-    _lastData     = data;
-    _lastSelected = selectedBrand;
+    _lastData = data;
 
     const outer = document.getElementById('chart');
     outer.innerHTML = '';
@@ -992,19 +990,32 @@
       case 'arc':            renderArc(el, data, selectedBrand, D.arc);                          break;
       default: showError('Unknown chart type: "' + CONFIG.chart + '"');
     }
+
+    document.title = [CONFIG.chart, CONFIG.metricId].filter(Boolean).join(' | ') || 'BP Chart Extensions';
+    const svgEl = document.querySelector('#chart svg');
+    if (svgEl && _highlightedBrand) applySelectionOpacity(svgEl);
   }
 
   // ─── MARK SELECTOR ───────────────────────────────────────────────────────
   async function selectBrand(name, dashboard) {
-    _selectedBrand = name;
-    if (_lastData) renderChart(_lastData, _selectedBrand, _dashboard);
+    _highlightedBrand = (_highlightedBrand === name) ? null : name;
+    const svgEl = document.querySelector('#chart svg');
+    if (svgEl) applySelectionOpacity(svgEl);
     if (!dashboard) return;
-    const criteria = [{ fieldName: CONFIG.brandField, value: name }];
-    await Promise.allSettled(
-      dashboard.worksheets
-        .filter(ws => ws.name !== CONFIG.worksheet)
-        .map(ws => ws.selectMarksByValueAsync(criteria, tableau.SelectionUpdateType.Replace))
-    );
+    if (_highlightedBrand) {
+      const criteria = [{ fieldName: CONFIG.brandField, value: _highlightedBrand }];
+      await Promise.allSettled(
+        dashboard.worksheets
+          .filter(ws => ws.name !== CONFIG.worksheet)
+          .map(ws => ws.selectMarksByValueAsync(criteria, tableau.SelectionUpdateType.Replace))
+      );
+    } else {
+      await Promise.allSettled(
+        dashboard.worksheets
+          .filter(ws => ws.name !== CONFIG.worksheet)
+          .map(ws => ws.clearSelectedMarksAsync())
+      );
+    }
   }
 
   // ─── HELPERS ─────────────────────────────────────────────────────────────
@@ -1064,6 +1075,7 @@
 
     g.selectAll('path').data(pie(data)).join('path')
       .attr('d', arc)
+      .attr('data-brand',   d => d.data.name)
       .attr('fill',         d => d.data.name === selectedBrand ? CONFIG.selectedColor : CONFIG.neutralColor)
       .attr('stroke',       holeColor)
       .attr('stroke-width', isTransparent ? 0 : 2)
@@ -1130,11 +1142,12 @@
       const x = d3.scaleLinear().domain([0, d3.max(data, d => d.value) * 1.15]).range([0, w]);
 
       g.selectAll('rect').data(sorted).join('rect')
-        .attr('x',      0)
-        .attr('y',      d => y(d.name))
-        .attr('width',  d => x(d.value))
-        .attr('height', y.bandwidth())
-        .attr('fill',   d => d.name === selectedBrand ? CONFIG.selectedColor : CONFIG.neutralColor)
+        .attr('x',          0)
+        .attr('y',          d => y(d.name))
+        .attr('width',      d => x(d.value))
+        .attr('height',     y.bandwidth())
+        .attr('fill',       d => d.name === selectedBrand ? CONFIG.selectedColor : CONFIG.neutralColor)
+        .attr('data-brand', d => d.name)
         .attr('rx', 2)
         .style('cursor', 'pointer')
         .on('click', async (e, d) => { await selectBrand(d.name, dashboard); });
@@ -1172,11 +1185,12 @@
       const y = d3.scaleLinear().domain([0, d3.max(data, d => d.value) * 1.15]).range([h, 0]);
 
       g.selectAll('rect').data(sorted).join('rect')
-        .attr('x',      d => x(d.name))
-        .attr('y',      d => y(d.value))
-        .attr('width',  x.bandwidth())
-        .attr('height', d => h - y(d.value))
-        .attr('fill',   d => d.name === selectedBrand ? CONFIG.selectedColor : CONFIG.neutralColor)
+        .attr('x',          d => x(d.name))
+        .attr('y',          d => y(d.value))
+        .attr('width',      x.bandwidth())
+        .attr('height',     d => h - y(d.value))
+        .attr('fill',       d => d.name === selectedBrand ? CONFIG.selectedColor : CONFIG.neutralColor)
+        .attr('data-brand', d => d.name)
         .attr('rx', 2)
         .style('cursor', 'pointer')
         .on('click', async (e, d) => { await selectBrand(d.name, dashboard); });
@@ -1244,6 +1258,7 @@
       g.append('path').datum(brand.values)
         .attr('fill', 'none').attr('stroke', CONFIG.neutralColor)
         .attr('stroke-width', 1).attr('opacity', 0.5).attr('d', line)
+        .attr('data-brand', brand.name)
         .style('pointer-events', 'none');
       g.append('path').datum(brand.values)
         .attr('fill', 'none').attr('stroke', 'transparent')
@@ -1257,6 +1272,7 @@
       g.append('path').datum(selBrand.values)
         .attr('fill', 'none').attr('stroke', CONFIG.selectedColor)
         .attr('stroke-width', 2.5).attr('d', line)
+        .attr('data-brand', selBrand.name)
         .style('pointer-events', 'none');
       g.append('path').datum(selBrand.values)
         .attr('fill', 'none').attr('stroke', 'transparent')
@@ -1268,6 +1284,7 @@
         .attr('class', 'dot')
         .attr('cx', d => x(d.period)).attr('cy', d => y(d.value))
         .attr('r', 3.5).attr('fill', CONFIG.selectedColor)
+        .attr('data-brand', selBrand.name)
         .style('cursor', 'pointer')
         .on('click', async function() { await selectBrand(selBrand.name, dashboard); });
     }
@@ -1280,6 +1297,7 @@
         .attr('x', x(last.period) + 6)
         .attr('y', y(last.value))
         .attr('dominant-baseline', 'middle')
+        .attr('data-brand', brand.name)
         .style('fill',           brand.name === selectedBrand ? CONFIG.selectedColor : CONFIG.neutralColor)
         .style('font-size',      '10px')
         .style('font-family',    FONT_LIGHT)
