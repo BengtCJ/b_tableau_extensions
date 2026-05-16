@@ -261,7 +261,7 @@
 
   <script>
   // ─── VERSION ──────────────────────────────────────────────────────────────
-  const VERSION = '2026-05-16.4';
+  const VERSION = '2026-05-16.5';
 
   // ─── FONTS ────────────────────────────────────────────────────────────────
   const FONT_TITLE = "'Baskervville', 'Baskerville', Georgia, serif";
@@ -358,6 +358,20 @@
       data.filter(d => d.period === p).forEach(d => { row[d.name] = d.value; });
       return row;
     });
+  }
+
+  function tidyToSlope(data) {
+    const byName = {};
+    data.forEach(function(d) {
+      if (!byName[d.name]) byName[d.name] = [];
+      byName[d.name].push(d);
+    });
+    return Object.keys(byName).map(function(name) {
+      var rows = byName[name].slice().sort(function(a, b) {
+        return (a.period || '').localeCompare(b.period || '');
+      });
+      return { name: name, v1: rows[0].value, v2: rows[rows.length - 1].value };
+    }).filter(function(d) { return d.v1 != null && d.v2 != null; });
   }
 
   function showTooSmall(el) {
@@ -973,7 +987,7 @@
       case 'bans':           renderBANs(el, data, selectedBrand, D.bans);                        break;
       case 'line-straight':  renderLineChart(el, tidyToWide(data), selectedBrand, true);         break;
       case 'line-smooth':    renderLineChart(el, tidyToWide(data), selectedBrand, false);        break;
-      case 'slope':          renderSlope(el, data, selectedBrand, D.slope);                      break;
+      case 'slope':          renderSlope(el, tidyToSlope(data), selectedBrand, D.slope);          break;
       case 'area-100':       renderArea100(el, tidyToWide(data), selectedBrand, D.area100);      break;
       case 'stream':         renderStream(el, tidyToWide(data), selectedBrand, D.stream);        break;
       case 'treemap':        renderTreemap(el, data, selectedBrand, D.treemap);                  break;
