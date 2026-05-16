@@ -261,7 +261,7 @@
 
   <script>
   // ─── VERSION ──────────────────────────────────────────────────────────────
-  const VERSION = '2026-05-16.3';
+  const VERSION = '2026-05-16.4';
 
   // ─── FONTS ────────────────────────────────────────────────────────────────
   const FONT_TITLE = "'Baskervville', 'Baskerville', Georgia, serif";
@@ -545,7 +545,8 @@
 
     const isTransparent   = CONFIG.bgColor === 'transparent';
     const bgColorValue    = isTransparent ? '#333333' : CONFIG.bgColor;
-    const effectiveMetric = _dashboard ? detectMetricId(_dashboard) : CONFIG.metricId;
+    const effectiveMetric    = _dashboard ? detectMetricId(_dashboard) : CONFIG.metricId;
+    const metricAutoDetected = _dashboard && Object.prototype.hasOwnProperty.call(METRIC_CHARTS, effectiveMetric);
 
     const worksheetOptions = worksheets
       ? worksheets.map(ws => `<option value="${ws}" ${ws === CONFIG.worksheet ? 'selected' : ''}>${ws}</option>`).join('')
@@ -561,9 +562,9 @@
 
           <div class="field">
             <label>Metric</label>
-            ${_dashboard
-              ? `<div style="padding:6px 8px;border-radius:4px;background:var(--grey-800);color:var(--grey-400);font-size:11px;font-family:'Tableau Light',Arial,sans-serif;">${effectiveMetric || '—'}<div class="hint" style="margin-top:2px;">Auto-detected from dashboard name</div></div>`
-              : `<input id="s-metric" type="text" value="${CONFIG.metricId}" list="s-metric-ids" placeholder="e.g. bss, nps, sov">
+            ${metricAutoDetected
+              ? `<div style="padding:6px 8px;border-radius:4px;background:var(--grey-800);color:var(--grey-400);font-size:11px;font-family:'Tableau Light',Arial,sans-serif;">${effectiveMetric}<div class="hint" style="margin-top:2px;">Auto-detected from dashboard name</div></div>`
+              : `<input id="s-metric" type="text" value="${effectiveMetric}" list="s-metric-ids" placeholder="e.g. bss, nps, sov">
                  <datalist id="s-metric-ids">
                    <option value="tam"><option value="cagr"><option value="svt">
                    <option value="sop"><option value="cra"><option value="bss">
@@ -722,7 +723,7 @@
 
     document.getElementById('s-save').onclick = async () => {
       CONFIG.chart         = document.getElementById('s-chart').value;
-      CONFIG.metricId = _dashboard
+      CONFIG.metricId = metricAutoDetected
         ? detectMetricId(_dashboard)
         : (document.getElementById('s-metric') ? document.getElementById('s-metric').value.trim().toLowerCase() : '');
       CONFIG.worksheet     = document.getElementById('s-worksheet').value;
