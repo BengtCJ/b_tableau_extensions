@@ -292,7 +292,7 @@
 
   <script>
   // ─── VERSION ──────────────────────────────────────────────────────────────
-  const VERSION = '2026-05-18.3';
+  const VERSION = '2026-05-18.4';
 
   // ─── FONTS ────────────────────────────────────────────────────────────────
   const FONT_TITLE = "'Baskervville', 'Baskerville', Georgia, serif";
@@ -420,6 +420,35 @@
       'color:var(--grey-700)">No data available</div>';
   }
 
+  function addGranularityPill(el) {
+    el.style.position = 'relative';
+    var pill = document.createElement('div');
+    pill.style.cssText =
+      'position:absolute;top:6px;right:6px;z-index:10;' +
+      'display:flex;border:1px solid #444;border-radius:20px;overflow:hidden;';
+    ['Q','M'].forEach(function(lbl, i) {
+      var isActive = i === 0 ? _granularity === 'quarter' : _granularity === 'month';
+      var btn = document.createElement('button');
+      btn.textContent = lbl;
+      btn.style.cssText =
+        'padding:3px 9px;border:none;cursor:pointer;' +
+        'font-size:9px;font-family:' + FONT_LIGHT + ';letter-spacing:0.08em;' +
+        'background:' + (isActive ? '#e994a2' : '#2A2828') + ';' +
+        'color:'       + (isActive ? '#222'    : '#808080') + ';';
+      btn.onclick = function() {
+        _granularity = i === 0 ? 'quarter' : 'month';
+        if (_dashboard) {
+          var ws = _dashboard.worksheets.find(function(w) { return w.name === CONFIG.worksheet; });
+          if (ws) fetchAndRender(ws, _dashboard);
+        } else {
+          renderChart(getSampleData(CONFIG.chart), _lastSelected, null);
+        }
+      };
+      pill.appendChild(btn);
+    });
+    el.appendChild(pill);
+  }
+
   function applySelectionOpacity(svgEl) {
     d3.select(svgEl).selectAll('[data-brand]')
       .transition().duration(180).ease(d3.easeCubicOut)
@@ -438,6 +467,7 @@
     brandField:    'Brand Name Upper',
     valueField:    'SUM(Raw Value)',
     periodField:   'Quarter',
+    monthField:    'Month',
     parameter:     'Select Client Brand',
     selectedColor: '#e994a2',
     neutralColor:  '#7d7d7d',
@@ -451,7 +481,10 @@
   let _selectedBrand    = null;
   let _allData          = null;
   let _selectedPeriod   = 'all';
+  let _granularity      = 'quarter'; // 'quarter' | 'month'
   let CONFIG            = { ...DEFAULTS };
+
+  const MULTI_PERIOD_CHARTS = ['line','line-smooth','line-straight','area-100','small-multiples','stream','slope'];
 
   // ─── APPLY BACKGROUND ─────────────────────────────────────────────────────
   function applyBackground() {
@@ -697,6 +730,10 @@
                 <input id="s-periodField" type="text" value="${CONFIG.periodField}" list="s-columns">
               </div>
               <div class="field">
+                <label>Month field</label>
+                <input id="s-monthField" type="text" value="${CONFIG.monthField}" list="s-columns">
+              </div>
+              <div class="field">
                 <label>Parameter</label>
                 <input id="s-parameter" type="text" value="${CONFIG.parameter}">
               </div>
@@ -793,6 +830,7 @@
       CONFIG.brandField    = document.getElementById('s-brandField').value;
       CONFIG.valueField    = document.getElementById('s-valueField').value;
       CONFIG.periodField   = document.getElementById('s-periodField').value;
+      CONFIG.monthField    = document.getElementById('s-monthField').value;
       CONFIG.parameter     = document.getElementById('s-parameter').value;
       CONFIG.selectedColor = document.getElementById('s-selectedColor').value;
       CONFIG.neutralColor  = document.getElementById('s-neutralColor').value;
@@ -909,6 +947,7 @@
       const brandIdx     = cols.findIndex(c => c.fieldName === CONFIG.brandField);
       const valueIdx     = cols.findIndex(c => c.fieldName === CONFIG.valueField);
       const periodIdx    = cols.findIndex(c => c.fieldName === CONFIG.periodField);
+      const monthIdx     = cols.findIndex(c => c.fieldName === CONFIG.monthField);
       const indicatorIdx = cols.findIndex(c => c.fieldName === 'indicator_id');
 
       if (brandIdx === -1 || valueIdx === -1) {
@@ -924,6 +963,7 @@
           indicator: indicatorIdx !== -1 ? row[indicatorIdx].value : null,
         };
         if (periodIdx !== -1) entry.period = row[periodIdx].formattedValue || row[periodIdx].value;
+        if (monthIdx  !== -1) entry.month  = row[monthIdx].formattedValue  || row[monthIdx].value;
         return entry;
       }).filter(d => d.value > 0)
         .filter(d => !CONFIG.metricId || d.indicator === CONFIG.metricId);
@@ -956,17 +996,43 @@
       if (_lastData) renderChart(_lastData, _selectedBrand, _dashboard);
       return;
     }
-    const multiPeriodCharts = ['line','line-smooth','line-straight','area-100','small-multiples','stream','slope'];
     let data;
-    if (_selectedPeriod === 'all') {
-      if (!multiPeriodCharts.includes(CONFIG.chart)) {
-        const periods = [...new Set(_allData.map(d => d.period).filter(Boolean))];
-        data = periods.length > 1 ? _allData.filter(d => d.period === periods[periods.length - 1]) : _allData;
+    if (MULTI_PERIOD_CHARTS.includes(CONFIG.chart)) {
+      if (_granularity === 'month') {
+        data = _allData.filter(function(d) { return d.month; }).map(function(d) { return Object.assign({}, d, { period: d.month }); });
+        if (!data.length) data = _allData;
       } else {
-        data = _allData;
+        // Quarter mode: only keep quarters where every month is represented
+        var qMonths = {};
+        _allData.forEach(function(d) {
+          if (d.period && d.month) {
+            if (!qMonths[d.period]) qMonths[d.period] = {};
+            qMonths[d.period][d.month] = true;
+          }
+        });
+        var sizes = Object.keys(qMonths).map(function(q) { return Object.keys(qMonths[q]).length; });
+        var maxMonths = sizes.length ? Math.max.apply(null, sizes) : 0;
+        var complete = Object.keys(qMonths).filter(function(q) { return Object.keys(qMonths[q]).length === maxMonths; });
+        // If no month data, pass through all quarters unchanged
+        data = (maxMonths === 0) ? _allData : _allData.filter(function(d) { return !d.period || complete.indexOf(d.period) !== -1; });
+        // Deduplicate: one row per brand+quarter
+        var seen = {};
+        data = data.filter(function(d) {
+          var k = d.name + '|' + d.period;
+          if (seen[k]) return false;
+          seen[k] = true;
+          return true;
+        });
       }
     } else {
-      data = _allData.filter(d => d.period === _selectedPeriod);
+      if (_selectedPeriod === 'all') {
+        var periods = [];
+        var pSeen = {};
+        _allData.forEach(function(d) { if (d.period && !pSeen[d.period]) { pSeen[d.period] = true; periods.push(d.period); } });
+        data = periods.length > 1 ? _allData.filter(function(d) { return d.period === periods[periods.length - 1]; }) : _allData;
+      } else {
+        data = _allData.filter(function(d) { return d.period === _selectedPeriod; });
+      }
     }
     renderChart(data, _selectedBrand || (_allData[0] ? _allData[0].name : null), _dashboard);
   }
@@ -1087,7 +1153,11 @@
     el.style.cssText = 'flex:1;min-height:0;overflow:hidden;';
     outer.appendChild(el);
 
-    injectPeriodToggle(el);
+    if (MULTI_PERIOD_CHARTS.includes(CONFIG.chart)) {
+      addGranularityPill(el);
+    } else {
+      injectPeriodToggle(el);
+    }
 
     const D = buildDesign();
 
