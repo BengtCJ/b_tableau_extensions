@@ -243,6 +243,47 @@
       line-height: 1;
     }
     #configure-btn:hover { opacity: 1; }
+
+    /* ── Period toggle ── */
+    .period-toggle {
+      display: inline-flex;
+      position: relative;
+      background: #111;
+      border-radius: 20px;
+      padding: 4px;
+      user-select: none;
+    }
+    .period-toggle__indicator {
+      position: absolute;
+      top: 4px;
+      left: 0;
+      height: calc(100% - 8px);
+      background: #3a3a3a;
+      border-radius: 16px;
+      transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+                  width    0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      pointer-events: none;
+      z-index: 0;
+    }
+    .period-toggle__opt {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 20px;
+      height: 28px;
+      font-size: 10px;
+      font-family: 'Tableau Light', Georgia, serif;
+      text-transform: uppercase;
+      letter-spacing: 0.09em;
+      cursor: pointer;
+      white-space: nowrap;
+      color: #555;
+      transition: color 0.18s;
+    }
+    .period-toggle__opt.active { color: #E6E6E6; }
+    .period-toggle__opt:hover:not(.active) { color: #808080; }
   </style>
 </head>
 <body>
@@ -251,7 +292,7 @@
 
   <script>
   // ─── VERSION ──────────────────────────────────────────────────────────────
-  const VERSION = '2026-05-18.1';
+  const VERSION = '2026-05-18.2';
 
   // ─── FONTS ────────────────────────────────────────────────────────────────
   const FONT_TITLE = "'Baskervville', 'Baskerville', Georgia, serif";
@@ -967,6 +1008,72 @@
     el.appendChild(strip);
   }
 
+  // ─── PERIOD TOGGLE ────────────────────────────────────────────────────────
+  function buildToggleHTML(id, periods) {
+    var opts = periods.map(function(p) {
+      return '<div class="period-toggle__opt' + (p === 'all' ? ' active' : '') +
+             '" data-period="' + p + '">' + (p === 'all' ? 'All' : p) + '</div>';
+    }).join('');
+    return '<div class="period-toggle" id="' + id + '">' +
+           '<div class="period-toggle__indicator" id="' + id + '-ind"></div>' +
+           opts + '</div>';
+  }
+
+  function createPeriodToggle(containerId, activePeriod, onChange) {
+    var container = document.getElementById(containerId);
+    var ind = document.getElementById(containerId + '-ind');
+    if (!container || !ind) return;
+
+    function moveIndicator(opt) {
+      ind.style.width = opt.offsetWidth + 'px';
+      ind.style.transform = 'translateX(' + opt.offsetLeft + 'px)';
+    }
+    function select(opt) {
+      container.querySelectorAll('.period-toggle__opt')
+        .forEach(function(o) { o.classList.remove('active'); });
+      opt.classList.add('active');
+      moveIndicator(opt);
+      onChange(opt.dataset.period);
+    }
+    container.querySelectorAll('.period-toggle__opt').forEach(function(opt) {
+      opt.addEventListener('click', function() { select(opt); });
+    });
+    var initial = container.querySelector('[data-period="' + activePeriod + '"]') ||
+                  container.querySelector('.period-toggle__opt');
+    if (initial) {
+      container.querySelectorAll('.period-toggle__opt')
+        .forEach(function(o) { o.classList.remove('active'); });
+      initial.classList.add('active');
+      ind.style.transition = 'none';
+      requestAnimationFrame(function() {
+        moveIndicator(initial);
+        requestAnimationFrame(function() { ind.style.transition = ''; });
+      });
+    }
+  }
+
+  function injectPeriodToggle(el) {
+    var MULTI_PERIOD = ['line','line-smooth','line-straight','area-100','small-multiples','stream','slope'];
+    if (!MULTI_PERIOD.includes(CONFIG.chart)) return;
+    if (!_allData) return;
+    var periods = Array.from(new Set(_allData.map(function(d) { return d.period; }).filter(Boolean))).sort();
+    if (periods.length <= 1) return;
+
+    var id = 'toggle-' + CONFIG.chart;
+    var activePeriod = (periods.indexOf(_selectedPeriod) !== -1) ? _selectedPeriod : 'all';
+
+    el.style.position = 'relative';
+    var wrap = document.createElement('div');
+    wrap.style.cssText = 'position:absolute;top:10px;right:10px;z-index:10;';
+    wrap.innerHTML = buildToggleHTML(id, ['all'].concat(periods));
+    el.appendChild(wrap);
+
+    createPeriodToggle(id, activePeriod, function(period) {
+      _selectedPeriod = period;
+      renderWithPeriod();
+    });
+  }
+
   // ─── ROUTER ───────────────────────────────────────────────────────────────
   function renderChart(data, selectedBrand, dashboard) {
     _lastData = data;
@@ -984,6 +1091,8 @@
     const el = document.createElement('div');
     el.style.cssText = 'flex:1;min-height:0;overflow:hidden;';
     outer.appendChild(el);
+
+    injectPeriodToggle(el);
 
     const D = buildDesign();
 
