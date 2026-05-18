@@ -292,7 +292,7 @@
 
   <script>
   // ─── VERSION ──────────────────────────────────────────────────────────────
-  const VERSION = '2026-05-18.4';
+  const VERSION = '2026-05-18.5';
 
   // ─── FONTS ────────────────────────────────────────────────────────────────
   const FONT_TITLE = "'Baskervville', 'Baskerville', Georgia, serif";
@@ -441,7 +441,7 @@
           var ws = _dashboard.worksheets.find(function(w) { return w.name === CONFIG.worksheet; });
           if (ws) fetchAndRender(ws, _dashboard);
         } else {
-          renderChart(getSampleData(CONFIG.chart), _lastSelected, null);
+          renderChart(getSampleData(CONFIG.chart), _selectedBrand, null);
         }
       };
       pill.appendChild(btn);
@@ -1013,8 +1013,12 @@
         var sizes = Object.keys(qMonths).map(function(q) { return Object.keys(qMonths[q]).length; });
         var maxMonths = sizes.length ? Math.max.apply(null, sizes) : 0;
         var complete = Object.keys(qMonths).filter(function(q) { return Object.keys(qMonths[q]).length === maxMonths; });
-        // If no month data, pass through all quarters unchanged
-        data = (maxMonths === 0) ? _allData : _allData.filter(function(d) { return !d.period || complete.indexOf(d.period) !== -1; });
+        // Keep: no period, no month data for that period (pre-aggregated), or period is complete
+        data = _allData.filter(function(d) {
+          if (!d.period) return true;
+          if (!qMonths[d.period]) return true; // no month data → pre-aggregated quarterly row, keep
+          return complete.indexOf(d.period) !== -1;
+        });
         // Deduplicate: one row per brand+quarter
         var seen = {};
         data = data.filter(function(d) {
