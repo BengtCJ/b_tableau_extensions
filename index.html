@@ -292,7 +292,7 @@
 
   <script>
   // ─── VERSION ──────────────────────────────────────────────────────────────
-  const VERSION = '2026-05-18.2';
+  const VERSION = '2026-05-18.3';
 
   // ─── FONTS ────────────────────────────────────────────────────────────────
   const FONT_TITLE = "'Baskervville', 'Baskerville', Georgia, serif";
@@ -1053,8 +1053,6 @@
   }
 
   function injectPeriodToggle(el) {
-    var MULTI_PERIOD = ['line','line-smooth','line-straight','area-100','small-multiples','stream','slope'];
-    if (!MULTI_PERIOD.includes(CONFIG.chart)) return;
     if (!_allData) return;
     var periods = Array.from(new Set(_allData.map(function(d) { return d.period; }).filter(Boolean))).sort();
     if (periods.length <= 1) return;
@@ -1084,9 +1082,6 @@
     outer.style.display       = 'flex';
     outer.style.flexDirection = 'column';
     outer.style.height        = '100%';
-
-    const { height: H } = outer.getBoundingClientRect();
-    injectPeriodSelector(outer, H);
 
     const el = document.createElement('div');
     el.style.cssText = 'flex:1;min-height:0;overflow:hidden;';
