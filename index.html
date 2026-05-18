@@ -292,7 +292,7 @@
 
   <script>
   // ─── VERSION ──────────────────────────────────────────────────────────────
-  const VERSION = '2026-05-18.6';
+  const VERSION = '2026-05-18.7';
 
   // ─── FONTS ────────────────────────────────────────────────────────────────
   const FONT_TITLE = "'Baskervville', 'Baskerville', Georgia, serif";
@@ -468,6 +468,7 @@
     valueField:    'SUM(Raw Value)',
     periodField:   'Quarter',
     monthField:    'Month',
+    allAggregation: 'average', // 'average' | 'sum'
     parameter:     'Select Client Brand',
     selectedColor: '#e994a2',
     neutralColor:  '#7d7d7d',
@@ -734,6 +735,13 @@
                 <input id="s-monthField" type="text" value="${CONFIG.monthField}" list="s-columns">
               </div>
               <div class="field">
+                <label>"All" periods</label>
+                <select id="s-allAggregation">
+                  <option value="average" ${CONFIG.allAggregation === 'average' ? 'selected' : ''}>Average</option>
+                  <option value="sum"     ${CONFIG.allAggregation === 'sum'     ? 'selected' : ''}>Sum</option>
+                </select>
+              </div>
+              <div class="field">
                 <label>Parameter</label>
                 <input id="s-parameter" type="text" value="${CONFIG.parameter}">
               </div>
@@ -831,6 +839,7 @@
       CONFIG.valueField    = document.getElementById('s-valueField').value;
       CONFIG.periodField   = document.getElementById('s-periodField').value;
       CONFIG.monthField    = document.getElementById('s-monthField').value;
+      CONFIG.allAggregation = document.getElementById('s-allAggregation').value;
       CONFIG.parameter     = document.getElementById('s-parameter').value;
       CONFIG.selectedColor = document.getElementById('s-selectedColor').value;
       CONFIG.neutralColor  = document.getElementById('s-neutralColor').value;
@@ -1045,7 +1054,7 @@
           var nameOrder = [];
           var nSeen = {};
           _allData.forEach(function(d) { if (!nSeen[d.name]) { nSeen[d.name]=true; nameOrder.push(d.name); } });
-          data = nameOrder.map(function(n) { var b=byName[n]; return { name:b.name, value:b.value/b.count, indicator:b.indicator }; });
+          data = nameOrder.map(function(n) { var b=byName[n]; return { name:b.name, value: CONFIG.allAggregation === 'sum' ? b.value : b.value/b.count, indicator:b.indicator }; });
         } else {
           data = _allData;
         }
